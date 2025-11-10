@@ -1,0 +1,548 @@
+﻿@page "/stockin"
+@layout MainLayout
+@using MauiApp2.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="dashboard-wrapper">
+    <aside class="sidebar">
+        <div class="logo">
+            <img src="images/quad.png" class="logo-img" />
+            <h1 class="company-name">
+                <span class="quad">Quad</span><span class="tech">Tech</span>
+            </h1>
+        </div>
+
+        <nav class="nav-menu">
+            <a href="/dashboard" class="nav-item">
+                <span class="icon">📊</span>
+                <span>Dashboard</span>
+            </a>
+            <a href="/ordering" class="nav-item">
+                <span class="icon">🛒</span>
+                <span>Ordering</span>
+            </a>
+
+            <div class="nav-section">
+                <div class="nav-section-header" @onclick="ToggleInventoryMenu">
+                    <span class="icon">📋</span>
+                    <span>Inventory Management</span>
+                    <span class="chevron @(isInventoryMenuOpen ? "open" : "")">›</span>
+                </div>
+                @if (isInventoryMenuOpen)
+                {
+                    <div class="nav-section-links">
+                        <a href="/products" class="nav-subitem">
+                            <span class="subitem-icon">📦</span>
+                            <span>Product List</span>
+                        </a>
+                        <a href="/stockin" class="nav-subitem active">
+                            <span class="subitem-icon">📥</span>
+                            <span>Stock In</span>
+                        </a>
+                        <a href="/stockout" class="nav-subitem">
+                            <span class="subitem-icon">📤</span>
+                            <span>Stock Out</span>
+                        </a>
+                        <a href="/stockadjustment" class="nav-subitem">
+                            <span class="subitem-icon">📦</span>
+                            <span>Stock Adjustment</span>
+                        </a>
+                    </div>
+                }
+            </div>
+        </nav>
+
+        <div class="nav-footer">
+            <button class="logout-btn" @onclick="Logout">
+                <span class="icon">➜</span>
+                <span>Logout</span>
+            </button>
+        </div>
+    </aside>
+
+    <main class="main-content">
+        <div class="content-header">
+            <h1>Inventory Management</h1>
+        </div>
+
+        <div class="stock-in-container">
+            <div class="tab-header">
+                <button class="tab-button active">Stock In</button>
+            </div>
+
+            <!-- Error Alert -->
+            @if (showError)
+            {
+                <div class="alert alert-error">
+                    <span class="error-icon">⚠️</span>
+                    <span>@errorMessage</span>
+                    <button class="alert-close" @onclick="ClearError">×</button>
+                </div>
+            }
+
+            <!-- Success Alert -->
+            @if (showSuccess)
+            {
+                <div class="alert alert-success">
+                    <span class="success-icon">✅</span>
+                    <span>@successMessage</span>
+                    <button class="alert-close" @onclick="ClearSuccess">×</button>
+                </div>
+            }
+
+            <!-- Add Stock Button -->
+            <div class="add-stock-section">
+                <button class="btn-add-stock-main" @onclick="ShowStockInModal">
+                    <span class="plus-icon">+</span> Stock In Form
+                </button>
+            </div>
+
+            <div class="history-section">
+                <div class="history-header">
+                    <h2>Stock In History Table</h2>
+                </div>
+
+                <div class="history-controls">
+                    <div class="sort-control">
+                        <span class="calendar-icon">📅</span>
+                        <input type="date" class="form-control date-input" @bind="filterDate" />
+                    </div>
+                    <div class="search-control">
+                        <input type="text" class="form-control search-input" placeholder="Enter product name or id" @bind="searchTerm" />
+                        <button class="btn-search" @onclick="SearchStockInHistory">🔎︎</button>
+                    </div>
+                </div>
+
+                <div class="history-table-wrapper">
+                    <table class="history-table">
+                        <thead>
+                            <tr>
+                                <th>Product ID</th>
+                                <th>Product Name</th>
+                                <th>Brand</th>
+                                <th>Category</th>
+                                <th>Date Added</th>
+                                <th>Quantity Added</th>
+                                <th>Supplier</th>
+                                <th>Processed By</th>
+                                <th>Remarks</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @if (stockInHistory?.Any() == true)
+                            {
+                                @foreach (var record in stockInHistory)
+                                {
+                                    <tr>
+                                        <td>@record.ProductId</td>
+                                        <td>@record.ProductName</td>
+                                        <td>@record.Brand</td>
+                                        <td>@record.Category</td>
+                                        <td>@record.DateAdded.ToString("MM/dd/yyyy")</td>
+                                        <td>@record.QuantityAdded</td>
+                                        <td>@record.Supplier</td>
+                                        <td>@record.ProcessedBy</td>
+                                        <td>@record.Remarks</td>
+                                    </tr>
+                                }
+                            }
+                            else
+                            {
+                                <tr>
+                                    <td colspan="9" class="no-data">No stock in records found</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<!-- Stock In Modal -->
+@if (showStockInModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Add Stock In</h3>
+                <button class="modal-close" @onclick="CloseModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="stock-in-form">
+                    <!-- Validation Errors -->
+                    @if (validationErrors?.Any() == true)
+                    {
+                        <div class="validation-errors">
+                            <h4>Please fix the following errors:</h4>
+                            <ul>
+                                @foreach (var error in validationErrors)
+                                {
+                                    <li>@error</li>
+                                }
+                            </ul>
+                        </div>
+                    }
+
+                    <div class="form-row">
+                        <div class="form-group full-width">
+                            <label>Product <span class="required">*</span></label>
+                            <select class="form-control @(HasError("Product") ? "error" : "")" @bind="selectedProductId">
+                                <option value="">Select product to add stock</option>
+                                @foreach (var product in products)
+                                {
+                                    <option value="@product.Id">@product.Name - @product.Brand (@product.Category)</option>
+                                }
+                            </select>
+                            @if (HasError("Product"))
+                            {
+                                <span class="field-error">Please select a product</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Quantity <span class="required">*</span></label>
+                            <input type="number" class="form-control @(HasError("Quantity") ? "error" : "")"
+                                   @bind="quantity" placeholder="Quantity" min="1" />
+                            @if (HasError("Quantity"))
+                            {
+                                <span class="field-error">Quantity must be greater than 0</span>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label>Supplier <span class="required">*</span></label>
+                            <select class="form-control @(HasError("Supplier") ? "error" : "")" @bind="selectedSupplierId">
+                                <option value="">Select Supplier</option>
+                                @foreach (var supplier in suppliers)
+                                {
+                                    <option value="@supplier.Id">@supplier.Name</option>
+                                }
+                            </select>
+                            @if (HasError("Supplier"))
+                            {
+                                <span class="field-error">Please select a supplier</span>
+                            }
+                        </div>
+                        <div class="form-group">
+                            <label>Date <span class="required">*</span></label>
+                            <div class="date-input-wrapper">
+                                <span class="calendar-icon">📅</span>
+                                <input type="date" class="form-control date-input @(HasError("Date") ? "error" : "")"
+                                       @bind="stockInDate" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
+                            </div>
+                            @if (HasError("Date"))
+                            {
+                                <span class="field-error">Date cannot be in the future</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group remarks-group">
+                            <label>Remarks/Notes (Optional)</label>
+                            <textarea class="form-control" @bind="remarks" placeholder="Remarks/Notes (Optional)" rows="3"></textarea>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
+                <button class="btn-submit" @onclick="SubmitStockIn" disabled="@isSubmitting">
+                    @if (isSubmitting)
+                    {
+                        <span>Processing...</span>
+                    }
+                    else
+                    {
+                        <span>Add Stock</span>
+                    }
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private bool isInventoryMenuOpen = true;
+    private bool showStockInModal = false;
+    private bool isSubmitting = false;
+    private bool showError = false;
+    private bool showSuccess = false;
+
+    // Form fields
+    private string selectedProductId = "";
+    private string selectedSupplierId = "";
+    private int quantity = 0;
+    private DateTime stockInDate = DateTime.Now;
+    private string remarks = "";
+    private string errorMessage = "";
+    private string successMessage = "";
+    private List<string> validationErrors = new List<string>();
+
+    // Filter fields
+    private DateTime? filterDate = null;
+    private string searchTerm = "";
+
+    // Sample data
+    private List<Product> products = new List<Product>
+    {
+        new Product { Id = "1", Name = "Laptop Dell XPS 13", Brand = "Dell", Category = "Electronics" },
+        new Product { Id = "2", Name = "Wireless Mouse", Brand = "Logitech", Category = "Accessories" },
+        new Product { Id = "3", Name = "Mechanical Keyboard", Brand = "Corsair", Category = "Accessories" },
+        new Product { Id = "4", Name = "27-inch Monitor", Brand = "Samsung", Category = "Electronics" }
+    };
+
+    private List<Supplier> suppliers = new List<Supplier>
+    {
+        new Supplier { Id = "1", Name = "Tech Supplies Inc." },
+        new Supplier { Id = "2", Name = "Global Electronics Ltd." },
+        new Supplier { Id = "3", Name = "Office Equipment Co." }
+    };
+
+    private List<StockInRecord> stockInHistory = new List<StockInRecord>();
+
+    protected override void OnInitialized()
+    {
+        if (!AuthService.IsAuthenticated)
+        {
+            Navigation.NavigateTo("/");
+        }
+        LoadSampleData();
+    }
+
+    private void LoadSampleData()
+    {
+        // Sample stock in history
+        stockInHistory = new List<StockInRecord>
+        {
+            new StockInRecord
+            {
+                ProductId = "1",
+                ProductName = "Laptop Dell XPS 13",
+                Brand = "Dell",
+                Category = "Electronics",
+                DateAdded = DateTime.Now.AddDays(-2),
+                QuantityAdded = 10,
+                Supplier = "Tech Supplies Inc.",
+                ProcessedBy = "John Doe",
+                Remarks = "Monthly restock"
+            },
+            new StockInRecord
+            {
+                ProductId = "2",
+                ProductName = "Wireless Mouse",
+                Brand = "Logitech",
+                Category = "Accessories",
+                DateAdded = DateTime.Now.AddDays(-1),
+                QuantityAdded = 50,
+                Supplier = "Global Electronics Ltd.",
+                ProcessedBy = "Jane Smith",
+                Remarks = "New shipment"
+            }
+        };
+    }
+
+    private void ToggleInventoryMenu()
+    {
+        isInventoryMenuOpen = !isInventoryMenuOpen;
+    }
+
+    private void ShowStockInModal()
+    {
+        showStockInModal = true;
+        ClearValidationErrors();
+        StateHasChanged();
+    }
+
+    private void CloseModal()
+    {
+        showStockInModal = false;
+        ResetForm();
+        ClearValidationErrors();
+        StateHasChanged();
+    }
+
+    private void ResetForm()
+    {
+        selectedProductId = "";
+        selectedSupplierId = "";
+        quantity = 0;
+        stockInDate = DateTime.Now;
+        remarks = "";
+        isSubmitting = false;
+    }
+
+    private void ClearValidationErrors()
+    {
+        validationErrors.Clear();
+    }
+
+    private void ClearError()
+    {
+        showError = false;
+        errorMessage = "";
+    }
+
+    private void ClearSuccess()
+    {
+        showSuccess = false;
+        successMessage = "";
+    }
+
+    private bool HasError(string fieldName)
+    {
+        return validationErrors.Any(e => e.Contains(fieldName));
+    }
+
+    private List<string> ValidateForm()
+    {
+        var errors = new List<string>();
+
+        if (string.IsNullOrEmpty(selectedProductId))
+            errors.Add("Product: Please select a product");
+
+        if (quantity <= 0)
+            errors.Add("Quantity: Quantity must be greater than 0");
+
+        if (string.IsNullOrEmpty(selectedSupplierId))
+            errors.Add("Supplier: Please select a supplier");
+
+        if (stockInDate > DateTime.Now)
+            errors.Add("Date: Stock in date cannot be in the future");
+
+        if (quantity > 10000)
+            errors.Add("Quantity: Quantity is too large. Please contact administrator for bulk stock entries.");
+
+        return errors;
+    }
+
+    private async Task SubmitStockIn()
+    {
+        try
+        {
+            isSubmitting = true;
+            ClearValidationErrors();
+            ClearError();
+            ClearSuccess();
+            StateHasChanged();
+
+            // Validate form
+            validationErrors = ValidateForm();
+
+            if (validationErrors.Any())
+            {
+                StateHasChanged();
+                return;
+            }
+
+            // Simulate API call delay
+            await Task.Delay(1000);
+
+            // Create new stock in record
+            var product = products.FirstOrDefault(p => p.Id == selectedProductId);
+            var supplier = suppliers.FirstOrDefault(s => s.Id == selectedSupplierId);
+
+            if (product == null || supplier == null)
+            {
+                ShowError("Invalid product or supplier selected");
+                return;
+            }
+
+            var newRecord = new StockInRecord
+            {
+                ProductId = selectedProductId,
+                ProductName = product.Name,
+                Brand = product.Brand,
+                Category = product.Category,
+                DateAdded = stockInDate,
+                QuantityAdded = quantity,
+                Supplier = supplier.Name,
+                ProcessedBy = "Current User",
+                Remarks = remarks
+            };
+
+            // Add to history
+            stockInHistory.Insert(0, newRecord);
+
+            // Show success message
+            ShowSuccess($"Successfully added {quantity} units of {product.Name} to stock");
+
+            // Close modal and reset form
+            CloseModal();
+
+            // Refresh the table
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            ShowError($"An error occurred while processing stock in: {ex.Message}");
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ShowError(string message)
+    {
+        errorMessage = message;
+        showError = true;
+        StateHasChanged();
+    }
+
+    private void ShowSuccess(string message)
+    {
+        successMessage = message;
+        showSuccess = true;
+        StateHasChanged();
+    }
+
+    private void SearchStockInHistory()
+    {
+        // In a real application, this would call an API
+        if (!string.IsNullOrEmpty(searchTerm))
+        {
+            // Filter logic would be implemented here
+            Console.WriteLine($"Searching for: {searchTerm}");
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/");
+    }
+
+    // Helper classes
+    private class Product
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+    }
+
+    private class Supplier
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+    }
+
+    private class StockInRecord
+    {
+        public string ProductId { get; set; } = string.Empty;
+        public string ProductName { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public DateTime DateAdded { get; set; }
+        public int QuantityAdded { get; set; }
+        public string Supplier { get; set; } = string.Empty;
+        public string ProcessedBy { get; set; } = string.Empty;
+        public string Remarks { get; set; } = string.Empty;
+    }
+}
