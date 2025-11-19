@@ -5,61 +5,7 @@
 @inject NavigationManager Navigation
 
 <div class="dashboard-wrapper">
-    <aside class="sidebar">
-        <div class="logo">
-            <img src="images/quad.png" class="logo-img" />
-            <h1 class="company-name">
-                <span class="quad">Quad</span><span class="tech">Tech</span>
-            </h1>
-        </div>
-
-        <nav class="nav-menu">
-            <a href="/dashboard" class="nav-item">
-                <span class="icon">📊</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="/ordering" class="nav-item">
-                <span class="icon">📦</span>
-                <span>Ordering</span>
-            </a>
-
-            <div class="nav-section">
-                <div class="nav-section-header" @onclick="ToggleInventoryMenu">
-                    <span class="icon">📋</span>
-                    <span>Inventory Management</span>
-                    <span class="chevron @(isInventoryMenuOpen ? "open" : "")">›</span>
-                </div>
-                @if (isInventoryMenuOpen)
-                {
-                    <div class="nav-section-links">
-                        <a href="/products" class="nav-subitem active">
-                            <span class="subitem-icon">📦</span>
-                            <span>Product List</span>
-                        </a>
-                        <a href="/stockin" class="nav-subitem">
-                            <span class="subitem-icon">📥</span>
-                            <span>Stock In</span>
-                        </a>
-                        <a href="/stockout" class="nav-subitem">
-                            <span class="subitem-icon">📤</span>
-                            <span>Stock Out</span>
-                        </a>
-                        <a href="/stockadjustment" class="nav-subitem">
-                            <span class="subitem-icon">⚖️</span>
-                            <span>Stock Adjustment</span>
-                        </a>
-                    </div>
-                }
-            </div>
-        </nav>
-
-        <div class="nav-footer">
-            <button class="logout-btn" @onclick="Logout">
-                <span class="icon">🚪</span>
-                <span>Logout</span>
-            </button>
-        </div>
-    </aside>
+    <Sidebar />
 
     <div class="main-content">
         <div class="content-header">
@@ -101,7 +47,7 @@
                     <div class="search-container">
                         <input type="text"
                                class="search-input"
-                               placeholder="Enter product name or Product ID"
+                               placeholder="Enter product name, SKU, or Model Number"
                                @bind="searchQuery"
                                @bind:event="oninput" />
                         <span class="search-icon">🔎︎</span>
@@ -111,11 +57,14 @@
                 <table class="product-table">
                     <thead>
                         <tr>
-                            <th>Product ID</th>
                             <th>Product Name</th>
-                            <th>Brand</th>
                             <th>Category</th>
-                            <th>Item Price</th>
+                            <th>Brand</th>
+                            <th>SKU</th>
+                            <th>Model Number</th>
+                            <th>Cost Price</th>
+                            <th>Sell Price</th>
+                            <th>Status</th>
                             <th>Quantity</th>
                             <th>Actions</th>
                         </tr>
@@ -126,11 +75,16 @@
                             @foreach (var product in FilteredProducts)
                             {
                                 <tr>
-                                    <td>@product.ProductId</td>
                                     <td>@product.ProductName</td>
-                                    <td>@product.Brand</td>
                                     <td>@product.Category</td>
-                                    <td>₱@product.ItemPrice.ToString("N2")</td>
+                                    <td>@product.Brand</td>
+                                    <td>@product.SKU</td>
+                                    <td>@product.ModelNumber</td>
+                                    <td>₱@product.CostPrice.ToString("N2")</td>
+                                    <td>₱@product.SellPrice.ToString("N2")</td>
+                                    <td>
+                                        <span class="status-badge @product.Status.ToLower()">@product.Status</span>
+                                    </td>
                                     <td>@product.Quantity</td>
                                     <td>
                                         <button class="edit-btn" @onclick="() => ShowEditModal(product)">
@@ -143,7 +97,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="7" style="text-align: center; padding: 40px; color: #6b7280;">
+                                <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
                                     @if (string.IsNullOrWhiteSpace(searchQuery))
                                     {
                                         <span>No products found. Click "Add Item" to add your first product.</span>
@@ -188,16 +142,6 @@
 
                 <div class="form-container">
                     <div class="form-group">
-                        <label>Product ID *</label>
-                        <input type="text"
-                               class="form-control"
-                               value="@newProductId"
-                               disabled
-                               placeholder="Auto-generated" />
-                        <small class="form-help">Product ID is automatically generated</small>
-                    </div>
-
-                    <div class="form-group">
                         <label>Product Name *</label>
                         <input type="text"
                                class="form-control @(HasError("ProductName") ? "input-error" : "")"
@@ -211,26 +155,6 @@
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Brand *</label>
-                            <select class="form-control @(HasError("Brand") ? "input-error" : "")"
-                                    @bind="newBrand">
-                                <option value="">Select Brand</option>
-                                <option value="LG">LG</option>
-                                <option value="Samsung">Samsung</option>
-                                <option value="Panasonic">Panasonic</option>
-                                <option value="Sharp">Sharp</option>
-                                <option value="Toshiba">Toshiba</option>
-                                <option value="Sony">Sony</option>
-                                <option value="Whirlpool">Whirlpool</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            @if (HasError("Brand"))
-                            {
-                                <span class="field-error">@GetError("Brand")</span>
-                            }
-                        </div>
-
                         <div class="form-group">
                             <label>Category *</label>
                             <select class="form-control @(HasError("Category") ? "input-error" : "")"
@@ -250,30 +174,111 @@
                                 <span class="field-error">@GetError("Category")</span>
                             }
                         </div>
+
+                        <div class="form-group">
+                            <label>Brand *</label>
+                            <select class="form-control @(HasError("Brand") ? "input-error" : "")"
+                                    @bind="newBrand">
+                                <option value="">Select Brand</option>
+                                <option value="LG">LG</option>
+                                <option value="Samsung">Samsung</option>
+                                <option value="Panasonic">Panasonic</option>
+                                <option value="Sharp">Sharp</option>
+                                <option value="Toshiba">Toshiba</option>
+                                <option value="Sony">Sony</option>
+                                <option value="Whirlpool">Whirlpool</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            @if (HasError("Brand"))
+                            {
+                                <span class="field-error">@GetError("Brand")</span>
+                            }
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Item Price (₱) *</label>
-                        <input type="number"
-                               class="form-control @(HasError("ItemPrice") ? "input-error" : "")"
-                               @bind="newItemPrice"
-                               step="0.01"
-                               min="0"
-                               placeholder="0.00" />
-                        @if (HasError("ItemPrice"))
-                        {
-                            <span class="field-error">@GetError("ItemPrice")</span>
-                        }
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>SKU *</label>
+                            <input type="text"
+                                   class="form-control @(HasError("SKU") ? "input-error" : "")"
+                                   @bind="newSKU"
+                                   placeholder="Enter SKU"
+                                   maxlength="50" />
+                            @if (HasError("SKU"))
+                            {
+                                <span class="field-error">@GetError("SKU")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label>Model Number *</label>
+                            <input type="text"
+                                   class="form-control @(HasError("ModelNumber") ? "input-error" : "")"
+                                   @bind="newModelNumber"
+                                   placeholder="Enter model number"
+                                   maxlength="50" />
+                            @if (HasError("ModelNumber"))
+                            {
+                                <span class="field-error">@GetError("ModelNumber")</span>
+                            }
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Initial Quantity</label>
-                        <input type="text"
-                               class="form-control"
-                               value="0"
-                               disabled
-                               placeholder="Set via Stock In module" />
-                        <small class="form-help">Quantity is managed through the Stock In module</small>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Cost Price (₱) *</label>
+                            <input type="number"
+                                   class="form-control @(HasError("CostPrice") ? "input-error" : "")"
+                                   @bind="newCostPrice"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="0.00" />
+                            @if (HasError("CostPrice"))
+                            {
+                                <span class="field-error">@GetError("CostPrice")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label>Sell Price (₱) *</label>
+                            <input type="number"
+                                   class="form-control @(HasError("SellPrice") ? "input-error" : "")"
+                                   @bind="newSellPrice"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="0.00" />
+                            @if (HasError("SellPrice"))
+                            {
+                                <span class="field-error">@GetError("SellPrice")</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status *</label>
+                            <select class="form-control @(HasError("Status") ? "input-error" : "")"
+                                    @bind="newStatus">
+                                <option value="">Select Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                                <option value="Discontinued">Discontinued</option>
+                            </select>
+                            @if (HasError("Status"))
+                            {
+                                <span class="field-error">@GetError("Status")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label>Quantity</label>
+                            <input type="text"
+                                   class="form-control"
+                                   value="0"
+                                   disabled
+                                   placeholder="Set via Stock In module" />
+                            <small class="form-help">Quantity is managed through the Stock In module</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -311,14 +316,6 @@
 
                 <div class="form-container">
                     <div class="form-group">
-                        <label>Product ID</label>
-                        <input type="text"
-                               class="form-control"
-                               value="@editingProduct.ProductId"
-                               disabled />
-                    </div>
-
-                    <div class="form-group">
                         <label>Product Name *</label>
                         <input type="text"
                                class="form-control @(HasEditError("ProductName") ? "input-error" : "")"
@@ -332,26 +329,6 @@
                     </div>
 
                     <div class="form-row">
-                        <div class="form-group">
-                            <label>Brand *</label>
-                            <select class="form-control @(HasEditError("Brand") ? "input-error" : "")"
-                                    @bind="editBrand">
-                                <option value="">Select Brand</option>
-                                <option value="LG">LG</option>
-                                <option value="Samsung">Samsung</option>
-                                <option value="Panasonic">Panasonic</option>
-                                <option value="Sharp">Sharp</option>
-                                <option value="Toshiba">Toshiba</option>
-                                <option value="Sony">Sony</option>
-                                <option value="Whirlpool">Whirlpool</option>
-                                <option value="Other">Other</option>
-                            </select>
-                            @if (HasEditError("Brand"))
-                            {
-                                <span class="field-error">@GetEditError("Brand")</span>
-                            }
-                        </div>
-
                         <div class="form-group">
                             <label>Category *</label>
                             <select class="form-control @(HasEditError("Category") ? "input-error" : "")"
@@ -371,29 +348,110 @@
                                 <span class="field-error">@GetEditError("Category")</span>
                             }
                         </div>
+
+                        <div class="form-group">
+                            <label>Brand *</label>
+                            <select class="form-control @(HasEditError("Brand") ? "input-error" : "")"
+                                    @bind="editBrand">
+                                <option value="">Select Brand</option>
+                                <option value="LG">LG</option>
+                                <option value="Samsung">Samsung</option>
+                                <option value="Panasonic">Panasonic</option>
+                                <option value="Sharp">Sharp</option>
+                                <option value="Toshiba">Toshiba</option>
+                                <option value="Sony">Sony</option>
+                                <option value="Whirlpool">Whirlpool</option>
+                                <option value="Other">Other</option>
+                            </select>
+                            @if (HasEditError("Brand"))
+                            {
+                                <span class="field-error">@GetEditError("Brand")</span>
+                            }
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Item Price (₱) *</label>
-                        <input type="number"
-                               class="form-control @(HasEditError("ItemPrice") ? "input-error" : "")"
-                               @bind="editItemPrice"
-                               step="0.01"
-                               min="0"
-                               placeholder="0.00" />
-                        @if (HasEditError("ItemPrice"))
-                        {
-                            <span class="field-error">@GetEditError("ItemPrice")</span>
-                        }
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>SKU *</label>
+                            <input type="text"
+                                   class="form-control @(HasEditError("SKU") ? "input-error" : "")"
+                                   @bind="editSKU"
+                                   placeholder="Enter SKU"
+                                   maxlength="50" />
+                            @if (HasEditError("SKU"))
+                            {
+                                <span class="field-error">@GetEditError("SKU")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label>Model Number *</label>
+                            <input type="text"
+                                   class="form-control @(HasEditError("ModelNumber") ? "input-error" : "")"
+                                   @bind="editModelNumber"
+                                   placeholder="Enter model number"
+                                   maxlength="50" />
+                            @if (HasEditError("ModelNumber"))
+                            {
+                                <span class="field-error">@GetEditError("ModelNumber")</span>
+                            }
+                        </div>
                     </div>
 
-                    <div class="form-group">
-                        <label>Current Quantity</label>
-                        <input type="text"
-                               class="form-control"
-                               value="@editingProduct.Quantity"
-                               disabled />
-                        <small class="form-help">Quantity is managed through the Stock In module</small>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Cost Price (₱) *</label>
+                            <input type="number"
+                                   class="form-control @(HasEditError("CostPrice") ? "input-error" : "")"
+                                   @bind="editCostPrice"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="0.00" />
+                            @if (HasEditError("CostPrice"))
+                            {
+                                <span class="field-error">@GetEditError("CostPrice")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label>Sell Price (₱) *</label>
+                            <input type="number"
+                                   class="form-control @(HasEditError("SellPrice") ? "input-error" : "")"
+                                   @bind="editSellPrice"
+                                   step="0.01"
+                                   min="0"
+                                   placeholder="0.00" />
+                            @if (HasEditError("SellPrice"))
+                            {
+                                <span class="field-error">@GetEditError("SellPrice")</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Status *</label>
+                            <select class="form-control @(HasEditError("Status") ? "input-error" : "")"
+                                    @bind="editStatus">
+                                <option value="">Select Status</option>
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                                <option value="Discontinued">Discontinued</option>
+                            </select>
+                            @if (HasEditError("Status"))
+                            {
+                                <span class="field-error">@GetEditError("Status")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label>Current Quantity</label>
+                            <input type="text"
+                                   class="form-control"
+                                   value="@editingProduct.Quantity"
+                                   disabled />
+                            <small class="form-help">Quantity is managed through the Stock In module</small>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -414,17 +472,25 @@
     private Product? editingProduct = null;
 
     // Add form fields
-    private string newProductId = "";
     private string newProductName = "";
-    private string newBrand = "";
     private string newCategory = "";
-    private decimal newItemPrice = 0;
+    private string newBrand = "";
+    private string newSKU = "";
+    private string newModelNumber = "";
+    private decimal newCostPrice = 0;
+    private decimal newSellPrice = 0;
+    private string newStatus = "";
+    private int newQuantity = 0;
 
     // Edit form fields
     private string editProductName = "";
-    private string editBrand = "";
     private string editCategory = "";
-    private decimal editItemPrice = 0;
+    private string editBrand = "";
+    private string editSKU = "";
+    private string editModelNumber = "";
+    private decimal editCostPrice = 0;
+    private decimal editSellPrice = 0;
+    private string editStatus = "";
 
     // Messages and validation
     private string errorMessage = "";
@@ -436,16 +502,19 @@
     {
         public string ProductId { get; set; } = "";
         public string ProductName { get; set; } = "";
-        public string Brand { get; set; } = "";
         public string Category { get; set; } = "";
-        public decimal ItemPrice { get; set; }
+        public string Brand { get; set; } = "";
+        public string SKU { get; set; } = "";
+        public string ModelNumber { get; set; } = "";
+        public decimal CostPrice { get; set; }
+        public decimal SellPrice { get; set; }
+        public string Status { get; set; } = "Active";
         public int Quantity { get; set; }
     }
 
     protected override void OnInitialized()
     {
         LoadProducts();
-        GenerateNewProductId();
     }
 
     private void ToggleInventoryMenu()
@@ -461,61 +530,68 @@
             {
                 ProductId = "30235",
                 ProductName = "20 Cu. Ft. Side-by-Side Inverter Compressor Refrigerator",
-                Brand = "LG",
                 Category = "Refrigerator",
-                ItemPrice = 40195.00m,
+                Brand = "LG",
+                SKU = "LG-FRIDGE-20SBS",
+                ModelNumber = "LSXS26326S",
+                CostPrice = 32000.00m,
+                SellPrice = 40195.00m,
+                Status = "Active",
                 Quantity = 30
             },
             new Product
             {
                 ProductId = "30236",
                 ProductName = "55-inch 4K UHD Smart TV",
-                Brand = "Samsung",
                 Category = "Television",
-                ItemPrice = 32999.00m,
+                Brand = "Samsung",
+                SKU = "SAMSUNG-TV-55UHD",
+                ModelNumber = "UN55AU8000",
+                CostPrice = 26000.00m,
+                SellPrice = 32999.00m,
+                Status = "Active",
                 Quantity = 15
             },
             new Product
             {
                 ProductId = "30237",
                 ProductName = "Inverter Split Type Air Conditioner 1.5HP",
-                Brand = "Panasonic",
                 Category = "Air Conditioner",
-                ItemPrice = 28500.00m,
+                Brand = "Panasonic",
+                SKU = "PANASONIC-AC-1.5HP",
+                ModelNumber = "CS-PC12QKH",
+                CostPrice = 22000.00m,
+                SellPrice = 28500.00m,
+                Status = "Active",
                 Quantity = 22
             },
             new Product
             {
                 ProductId = "30238",
                 ProductName = "Front Load Washing Machine 8kg",
-                Brand = "LG",
                 Category = "Washing Machine",
-                ItemPrice = 25999.00m,
+                Brand = "LG",
+                SKU = "LG-WASHER-8KG",
+                ModelNumber = "F4J8JSP2T",
+                CostPrice = 20000.00m,
+                SellPrice = 25999.00m,
+                Status = "Active",
                 Quantity = 18
             },
             new Product
             {
                 ProductId = "30239",
                 ProductName = "Microwave Oven 25L",
-                Brand = "Sharp",
                 Category = "Kitchen Appliance",
-                ItemPrice = 5499.00m,
+                Brand = "Sharp",
+                SKU = "SHARP-MW-25L",
+                ModelNumber = "R-25STM",
+                CostPrice = 4200.00m,
+                SellPrice = 5499.00m,
+                Status = "Active",
                 Quantity = 40
             }
         };
-    }
-
-    private void GenerateNewProductId()
-    {
-        if (products.Any())
-        {
-            var lastId = products.Max(p => int.Parse(p.ProductId));
-            newProductId = (lastId + 1).ToString();
-        }
-        else
-        {
-            newProductId = "30240";
-        }
     }
 
     private IEnumerable<Product> FilteredProducts
@@ -526,10 +602,11 @@
                 return products;
 
             return products.Where(p =>
-                p.ProductId.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                 p.ProductName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                p.Brand.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                p.Category.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+                p.SKU.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                p.ModelNumber.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                p.Category.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                p.Brand.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -539,7 +616,6 @@
         showAddModal = true;
         ClearMessages();
         ResetAddForm();
-        GenerateNewProductId();
         StateHasChanged();
     }
 
@@ -558,9 +634,13 @@
 
         // Populate edit form
         editProductName = product.ProductName;
-        editBrand = product.Brand;
         editCategory = product.Category;
-        editItemPrice = product.ItemPrice;
+        editBrand = product.Brand;
+        editSKU = product.SKU;
+        editModelNumber = product.ModelNumber;
+        editCostPrice = product.CostPrice;
+        editSellPrice = product.SellPrice;
+        editStatus = product.Status;
 
         StateHasChanged();
     }
@@ -577,18 +657,27 @@
     private void ResetAddForm()
     {
         newProductName = "";
-        newBrand = "";
         newCategory = "";
-        newItemPrice = 0;
+        newBrand = "";
+        newSKU = "";
+        newModelNumber = "";
+        newCostPrice = 0;
+        newSellPrice = 0;
+        newStatus = "";
+        newQuantity = 0;
         validationErrors.Clear();
     }
 
     private void ResetEditForm()
     {
         editProductName = "";
-        editBrand = "";
         editCategory = "";
-        editItemPrice = 0;
+        editBrand = "";
+        editSKU = "";
+        editModelNumber = "";
+        editCostPrice = 0;
+        editSellPrice = 0;
+        editStatus = "";
         editValidationErrors.Clear();
     }
 
@@ -613,16 +702,33 @@
         else if (newProductName.Length < 2)
             AddValidationError("ProductName", "Product name must be at least 2 characters long");
 
-        if (string.IsNullOrWhiteSpace(newBrand))
-            AddValidationError("Brand", "Brand is required");
-
         if (string.IsNullOrWhiteSpace(newCategory))
             AddValidationError("Category", "Category is required");
 
-        if (newItemPrice <= 0)
-            AddValidationError("ItemPrice", "Item price must be greater than 0");
-        else if (newItemPrice > 1000000)
-            AddValidationError("ItemPrice", "Item price cannot exceed ₱1,000,000");
+        if (string.IsNullOrWhiteSpace(newBrand))
+            AddValidationError("Brand", "Brand is required");
+
+        if (string.IsNullOrWhiteSpace(newSKU))
+            AddValidationError("SKU", "SKU is required");
+
+        if (string.IsNullOrWhiteSpace(newModelNumber))
+            AddValidationError("ModelNumber", "Model number is required");
+
+        if (newCostPrice <= 0)
+            AddValidationError("CostPrice", "Cost price must be greater than 0");
+        else if (newCostPrice > 1000000)
+            AddValidationError("CostPrice", "Cost price cannot exceed ₱1,000,000");
+
+        if (newSellPrice <= 0)
+            AddValidationError("SellPrice", "Sell price must be greater than 0");
+        else if (newSellPrice > 1000000)
+            AddValidationError("SellPrice", "Sell price cannot exceed ₱1,000,000");
+
+        if (newSellPrice < newCostPrice)
+            AddValidationError("SellPrice", "Sell price cannot be less than cost price");
+
+        if (string.IsNullOrWhiteSpace(newStatus))
+            AddValidationError("Status", "Status is required");
     }
 
     private void ValidateEditForm()
@@ -634,16 +740,33 @@
         else if (editProductName.Length < 2)
             AddEditValidationError("ProductName", "Product name must be at least 2 characters long");
 
-        if (string.IsNullOrWhiteSpace(editBrand))
-            AddEditValidationError("Brand", "Brand is required");
-
         if (string.IsNullOrWhiteSpace(editCategory))
             AddEditValidationError("Category", "Category is required");
 
-        if (editItemPrice <= 0)
-            AddEditValidationError("ItemPrice", "Item price must be greater than 0");
-        else if (editItemPrice > 1000000)
-            AddEditValidationError("ItemPrice", "Item price cannot exceed ₱1,000,000");
+        if (string.IsNullOrWhiteSpace(editBrand))
+            AddEditValidationError("Brand", "Brand is required");
+
+        if (string.IsNullOrWhiteSpace(editSKU))
+            AddEditValidationError("SKU", "SKU is required");
+
+        if (string.IsNullOrWhiteSpace(editModelNumber))
+            AddEditValidationError("ModelNumber", "Model number is required");
+
+        if (editCostPrice <= 0)
+            AddEditValidationError("CostPrice", "Cost price must be greater than 0");
+        else if (editCostPrice > 1000000)
+            AddEditValidationError("CostPrice", "Cost price cannot exceed ₱1,000,000");
+
+        if (editSellPrice <= 0)
+            AddEditValidationError("SellPrice", "Sell price must be greater than 0");
+        else if (editSellPrice > 1000000)
+            AddEditValidationError("SellPrice", "Sell price cannot exceed ₱1,000,000");
+
+        if (editSellPrice < editCostPrice)
+            AddEditValidationError("SellPrice", "Sell price cannot be less than cost price");
+
+        if (string.IsNullOrWhiteSpace(editStatus))
+            AddEditValidationError("Status", "Status is required");
     }
 
     private void AddValidationError(string field, string message)
@@ -683,9 +806,14 @@
             ValidateAddForm();
             return validationErrors.Count == 0 &&
                    !string.IsNullOrWhiteSpace(newProductName) &&
-                   !string.IsNullOrWhiteSpace(newBrand) &&
                    !string.IsNullOrWhiteSpace(newCategory) &&
-                   newItemPrice > 0;
+                   !string.IsNullOrWhiteSpace(newBrand) &&
+                   !string.IsNullOrWhiteSpace(newSKU) &&
+                   !string.IsNullOrWhiteSpace(newModelNumber) &&
+                   !string.IsNullOrWhiteSpace(newStatus) &&
+                   newCostPrice > 0 &&
+                   newSellPrice > 0 &&
+                   newSellPrice >= newCostPrice;
         }
     }
 
@@ -696,9 +824,14 @@
             ValidateEditForm();
             return editValidationErrors.Count == 0 &&
                    !string.IsNullOrWhiteSpace(editProductName) &&
-                   !string.IsNullOrWhiteSpace(editBrand) &&
                    !string.IsNullOrWhiteSpace(editCategory) &&
-                   editItemPrice > 0;
+                   !string.IsNullOrWhiteSpace(editBrand) &&
+                   !string.IsNullOrWhiteSpace(editSKU) &&
+                   !string.IsNullOrWhiteSpace(editModelNumber) &&
+                   !string.IsNullOrWhiteSpace(editStatus) &&
+                   editCostPrice > 0 &&
+                   editSellPrice > 0 &&
+                   editSellPrice >= editCostPrice;
         }
     }
 
@@ -715,13 +848,19 @@
 
         try
         {
+            var newProductId = (products.Max(p => int.Parse(p.ProductId)) + 1).ToString();
+
             var newProduct = new Product
             {
                 ProductId = newProductId,
                 ProductName = newProductName.Trim(),
-                Brand = newBrand,
                 Category = newCategory,
-                ItemPrice = newItemPrice,
+                Brand = newBrand,
+                SKU = newSKU.Trim(),
+                ModelNumber = newModelNumber.Trim(),
+                CostPrice = newCostPrice,
+                SellPrice = newSellPrice,
+                Status = newStatus,
                 Quantity = 0 // Initial quantity is always 0
             };
 
@@ -753,9 +892,13 @@
             if (productToUpdate != null)
             {
                 productToUpdate.ProductName = editProductName.Trim();
-                productToUpdate.Brand = editBrand;
                 productToUpdate.Category = editCategory;
-                productToUpdate.ItemPrice = editItemPrice;
+                productToUpdate.Brand = editBrand;
+                productToUpdate.SKU = editSKU.Trim();
+                productToUpdate.ModelNumber = editModelNumber.Trim();
+                productToUpdate.CostPrice = editCostPrice;
+                productToUpdate.SellPrice = editSellPrice;
+                productToUpdate.Status = editStatus;
 
                 successMessage = $"Product '{editProductName}' updated successfully!";
             }

@@ -5,61 +5,7 @@
 @inject NavigationManager Navigation
 
 <div class="dashboard-wrapper">
-    <aside class="sidebar">
-        <div class="logo">
-            <img src="images/quad.png" class="logo-img" />
-            <h1 class="company-name">
-                <span class="quad">Quad</span><span class="tech">Tech</span>
-            </h1>
-        </div>
-
-        <nav class="nav-menu">
-            <a href="/dashboard" class="nav-item">
-                <span class="icon">📊</span>
-                <span>Dashboard</span>
-            </a>
-            <a href="/ordering" class="nav-item">
-                <span class="icon">🛒</span>
-                <span>Ordering</span>
-            </a>
-
-            <div class="nav-section">
-                <div class="nav-section-header" @onclick="ToggleInventoryMenu">
-                    <span class="icon">📋</span>
-                    <span>Inventory Management</span>
-                    <span class="chevron @(isInventoryMenuOpen ? "open" : "")">›</span>
-                </div>
-                @if (isInventoryMenuOpen)
-                {
-                    <div class="nav-section-links">
-                        <a href="/products" class="nav-subitem">
-                            <span class="subitem-icon">📦</span>
-                            <span>Product List</span>
-                        </a>
-                        <a href="/stockin" class="nav-subitem">
-                            <span class="subitem-icon">📥</span>
-                            <span>Stock In</span>
-                        </a>
-                        <a href="/stockout" class="nav-subitem active">
-                            <span class="subitem-icon">📤</span>
-                            <span>Stock Out</span>
-                        </a>
-                        <a href="/stockadjustment" class="nav-subitem">
-                            <span class="subitem-icon">📦</span>
-                            <span>Stock Adjustment</span>
-                        </a>
-                    </div>
-                }
-            </div>
-        </nav>
-
-        <div class="nav-footer">
-            <button class="logout-btn" @onclick="Logout">
-                <span class="icon">➜</span>
-                <span>Logout</span>
-            </button>
-        </div>
-    </aside>
+    <Sidebar />
 
     <main class="main-content">
         <div class="content-header">

@@ -32,7 +32,7 @@
     {
         <link href="css/ProductList.css" rel="stylesheet" />
     }
-    else if (CurrentPage == "stockin")
+    else if (CurrentPage == "purchase-orders")
     {
         <link href="css/StockIn.css" rel="stylesheet" />
     }
@@ -42,7 +42,15 @@
     }
     else if (CurrentPage == "adjust")
     {
-        <link href="css/ProductList.css" rel="stylesheet" />
+        <link href="css/StockAdjustment.css" rel="stylesheet" />
+    }
+    else if (CurrentPage == "users")
+    {
+        <link href="css/userlist.css" rel="stylesheet" />
+    }
+      else if (CurrentPage == "category")
+    {
+        <link href="css/category.css" rel="stylesheet" />
     }
 </head>
 <body>
@@ -63,9 +71,12 @@
         if (uri.Contains("/dashboard")) return "dashboard";
         if (uri.Contains("/ordering")) return "ordering";
         if (uri.Contains("/products")) return "products";
-        if (uri.Contains("/stockin")) return "stockin";
+        if (uri.Contains("/purchase-orders")) return "purchase-orders";
         if (uri.Contains("/stockout")) return "stockout";
         if (uri.Contains("/adjust")) return "adjust";
+         if (uri.Contains("/category")) return "category";
+         if (uri.Contains("/users")) return "users";
+          if (uri.Contains("/category")) return "category";
         return "other";
     }
 

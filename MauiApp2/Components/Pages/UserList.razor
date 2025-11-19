@@ -1,0 +1,1031 @@
+﻿@page "/users"
+@layout MainLayout
+@using MauiApp2.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<div class="dashboard-wrapper">
+    <Sidebar />
+
+    <div class="main-content">
+        <div class="content-header">
+            <h1>User Management</h1>
+            <p>Manage system users and their permissions</p>
+        </div>
+
+        <div class="inventory-section">
+            <div class="tab-section">
+                <div class="tabs">
+                    <button class="tab active">User List</button>
+                </div>
+            </div>
+
+            <div class="product-table-container">
+                <!-- Alert Messages -->
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-error">
+                        <i class="fas fa-exclamation-triangle alert-icon"></i>
+                        <span>@errorMessage</span>
+                        <button class="alert-close" @onclick="ClearErrorMessage">×</button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle alert-icon"></i>
+                        <span>@successMessage</span>
+                        <button class="alert-close" @onclick="ClearSuccessMessage">×</button>
+                    </div>
+                }
+
+                <div class="toolbar">
+                    <button class="add-item-btn" @onclick="ShowAddModal">
+                        <i class="fas fa-user-plus"></i>
+                        Add User
+                    </button>
+
+                    <div class="search-container">
+                        <input type="text"
+                               class="search-input"
+                               placeholder="Search users by name, email, or role..."
+                               @bind="searchQuery"
+                               @bind:event="oninput" />
+                        <i class="fas fa-search search-icon"></i>
+                    </div>
+                </div>
+
+                <table class="product-table">
+                    <thead>
+                        <tr>
+                            <th>User ID</th>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Department</th>
+                            <th>Status</th>
+                            <th>Last Login</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (FilteredUsers.Any())
+                        {
+                            @foreach (var user in FilteredUsers)
+                            {
+                                <tr>
+                                    <td>@user.UserId</td>
+                                    <td>
+                                        <div class="user-info">
+                                            <div class="user-avatar">
+                                                <i class="fas fa-user"></i>
+                                            </div>
+                                            <div class="user-details">
+                                                <div class="user-name">@user.FullName</div>
+                                                <div class="user-position">@user.Position</div>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>@user.Email</td>
+                                    <td>
+                                        <span class="role-badge @user.Role.ToLower()">
+                                            <i class="@GetRoleIcon(user.Role)"></i>
+                                            @user.Role
+                                        </span>
+                                    </td>
+                                    <td>@user.Department</td>
+                                    <td>
+                                        <span class="status-badge @user.Status.ToLower()">
+                                            <i class="@GetStatusIcon(user.Status)"></i>
+                                            @user.Status
+                                        </span>
+                                    </td>
+                                    <td>@user.LastLogin?.ToString("MMM dd, yyyy HH:mm")</td>
+                                    <td>
+                                        <div class="action-buttons">
+                                            <button class="edit-btn" @onclick="() => ShowEditModal(user)" title="Edit User">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="reset-btn" @onclick="() => ShowResetPasswordModal(user)" title="Reset Password">
+                                                <i class="fas fa-key"></i>
+                                            </button>
+                                            @if (user.Status == "Active")
+                                            {
+                                                <button class="deactivate-btn" @onclick="() => ToggleUserStatus(user)" title="Deactivate User">
+                                                    <i class="fas fa-user-slash"></i>
+                                                </button>
+                                            }
+                                            else
+                                            {
+                                                <button class="activate-btn" @onclick="() => ToggleUserStatus(user)" title="Activate User">
+                                                    <i class="fas fa-user-check"></i>
+                                                </button>
+                                            }
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="8" class="no-data">
+                                    <i class="fas fa-users no-data-icon"></i>
+                                    <div class="no-data-text">
+                                        @if (string.IsNullOrWhiteSpace(searchQuery))
+                                        {
+                                            <span>No users found. Click "Add User" to create your first user.</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No users match your search criteria.</span>
+                                        }
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add User Modal -->
+@if (showAddModal)
+{
+    <div class="modal-overlay" @onclick="CloseAddModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-plus"></i> Add New User</h3>
+                <button class="modal-close" @onclick="CloseAddModal">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Validation Summary -->
+                @if (validationErrors?.Any() == true)
+                {
+                    <div class="validation-summary">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h4>Please fix the following errors:</h4>
+                        <ul>
+                            @foreach (var error in validationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="form-container">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-id-card"></i> User ID *</label>
+                            <input type="text"
+                                   class="form-control"
+                                   value="@newUserId"
+                                   disabled
+                                   placeholder="Auto-generated" />
+                            <small class="form-help">User ID is automatically generated</small>
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Position</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="newPosition"
+                                   placeholder="Enter position title"
+                                   maxlength="50" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-signature"></i> First Name *</label>
+                            <input type="text"
+                                   class="form-control @(HasError("FirstName") ? "input-error" : "")"
+                                   @bind="newFirstName"
+                                   placeholder="Enter first name"
+                                   maxlength="50" />
+                            @if (HasError("FirstName"))
+                            {
+                                <span class="field-error">@GetError("FirstName")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-signature"></i> Last Name *</label>
+                            <input type="text"
+                                   class="form-control @(HasError("LastName") ? "input-error" : "")"
+                                   @bind="newLastName"
+                                   placeholder="Enter last name"
+                                   maxlength="50" />
+                            @if (HasError("LastName"))
+                            {
+                                <span class="field-error">@GetError("LastName")</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email Address *</label>
+                        <input type="email"
+                               class="form-control @(HasError("Email") ? "input-error" : "")"
+                               @bind="newEmail"
+                               placeholder="Enter email address"
+                               maxlength="100" />
+                        @if (HasError("Email"))
+                        {
+                            <span class="field-error">@GetError("Email")</span>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-shield-alt"></i> Role *</label>
+                            <select class="form-control @(HasError("Role") ? "input-error" : "")"
+                                    @bind="newRole">
+                                <option value="">Select Role</option>
+                                <option value="Administrator">Administrator</option>
+                                <option value="Manager">Manager</option>
+                                <option value="Staff">Staff</option>
+                                <option value="Viewer">Viewer</option>
+                            </select>
+                            @if (HasError("Role"))
+                            {
+                                <span class="field-error">@GetError("Role")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-building"></i> Department *</label>
+                            <select class="form-control @(HasError("Department") ? "input-error" : "")"
+                                    @bind="newDepartment">
+                                <option value="">Select Department</option>
+                                <option value="Administration">Administration</option>
+                                <option value="Sales">Sales</option>
+                                <option value="Inventory">Inventory</option>
+                                <option value="IT">IT</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Operations">Operations</option>
+                            </select>
+                            @if (HasError("Department"))
+                            {
+                                <span class="field-error">@GetError("Department")</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> Phone Number</label>
+                            <input type="tel"
+                                   class="form-control"
+                                   @bind="newPhoneNumber"
+                                   placeholder="Enter phone number"
+                                   maxlength="20" />
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-toggle-on"></i> Status *</label>
+                            <select class="form-control @(HasError("Status") ? "input-error" : "")"
+                                    @bind="newStatus">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                            @if (HasError("Status"))
+                            {
+                                <span class="field-error">@GetError("Status")</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseAddModal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-submit" @onclick="AddUser" disabled="@(!IsFormValid)">
+                    <i class="fas fa-save"></i> Add User
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit User Modal -->
+@if (showEditModal && editingUser != null)
+{
+    <div class="modal-overlay" @onclick="CloseEditModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3><i class="fas fa-user-edit"></i> Edit User</h3>
+                <button class="modal-close" @onclick="CloseEditModal">×</button>
+            </div>
+            <div class="modal-body">
+                <!-- Validation Summary -->
+                @if (editValidationErrors?.Any() == true)
+                {
+                    <div class="validation-summary">
+                        <i class="fas fa-exclamation-circle"></i>
+                        <h4>Please fix the following errors:</h4>
+                        <ul>
+                            @foreach (var error in editValidationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="form-container">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-id-card"></i> User ID</label>
+                            <input type="text"
+                                   class="form-control"
+                                   value="@editingUser.UserId"
+                                   disabled />
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-user"></i> Position</label>
+                            <input type="text"
+                                   class="form-control"
+                                   @bind="editPosition"
+                                   placeholder="Enter position title"
+                                   maxlength="50" />
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-signature"></i> First Name *</label>
+                            <input type="text"
+                                   class="form-control @(HasEditError("FirstName") ? "input-error" : "")"
+                                   @bind="editFirstName"
+                                   placeholder="Enter first name"
+                                   maxlength="50" />
+                            @if (HasEditError("FirstName"))
+                            {
+                                <span class="field-error">@GetEditError("FirstName")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-signature"></i> Last Name *</label>
+                            <input type="text"
+                                   class="form-control @(HasEditError("LastName") ? "input-error" : "")"
+                                   @bind="editLastName"
+                                   placeholder="Enter last name"
+                                   maxlength="50" />
+                            @if (HasEditError("LastName"))
+                            {
+                                <span class="field-error">@GetEditError("LastName")</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label><i class="fas fa-envelope"></i> Email Address *</label>
+                        <input type="email"
+                               class="form-control @(HasEditError("Email") ? "input-error" : "")"
+                               @bind="editEmail"
+                               placeholder="Enter email address"
+                               maxlength="100" />
+                        @if (HasEditError("Email"))
+                        {
+                            <span class="field-error">@GetEditError("Email")</span>
+                        }
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-shield-alt"></i> Role *</label>
+                            <select class="form-control @(HasEditError("Role") ? "input-error" : "")"
+                                    @bind="editRole">
+                                <option value="">Select Role</option>
+                                <option value="Administrator">Administrator</option>
+                                <option value="Manager">Manager</option>
+                                <option value="Staff">Staff</option>
+                                <option value="Viewer">Viewer</option>
+                            </select>
+                            @if (HasEditError("Role"))
+                            {
+                                <span class="field-error">@GetEditError("Role")</span>
+                            }
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-building"></i> Department *</label>
+                            <select class="form-control @(HasEditError("Department") ? "input-error" : "")"
+                                    @bind="editDepartment">
+                                <option value="">Select Department</option>
+                                <option value="Administration">Administration</option>
+                                <option value="Sales">Sales</option>
+                                <option value="Inventory">Inventory</option>
+                                <option value="IT">IT</option>
+                                <option value="Finance">Finance</option>
+                                <option value="Operations">Operations</option>
+                            </select>
+                            @if (HasEditError("Department"))
+                            {
+                                <span class="field-error">@GetEditError("Department")</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label><i class="fas fa-phone"></i> Phone Number</label>
+                            <input type="tel"
+                                   class="form-control"
+                                   @bind="editPhoneNumber"
+                                   placeholder="Enter phone number"
+                                   maxlength="20" />
+                        </div>
+
+                        <div class="form-group">
+                            <label><i class="fas fa-toggle-on"></i> Status *</label>
+                            <select class="form-control @(HasEditError("Status") ? "input-error" : "")"
+                                    @bind="editStatus">
+                                <option value="Active">Active</option>
+                                <option value="Inactive">Inactive</option>
+                            </select>
+                            @if (HasEditError("Status"))
+                            {
+                                <span class="field-error">@GetEditError("Status")</span>
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseEditModal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-submit" @onclick="UpdateUser" disabled="@(!IsEditFormValid)">
+                    <i class="fas fa-save"></i> Update User
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Reset Password Modal -->
+@if (showResetPasswordModal && resettingUser != null)
+{
+    <div class="modal-overlay" @onclick="CloseResetPasswordModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3><i class="fas fa-key"></i> Reset Password</h3>
+                <button class="modal-close" @onclick="CloseResetPasswordModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="reset-password-content">
+                    <i class="fas fa-key reset-password-icon"></i>
+                    <p>Are you sure you want to reset the password for <strong>@resettingUser.FullName</strong>?</p>
+                    <p class="reset-warning">A temporary password will be generated and sent to their email address.</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseResetPasswordModal">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button class="btn-submit" @onclick="ResetPassword">
+                    <i class="fas fa-sync-alt"></i> Reset Password
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string searchQuery = "";
+    private List<User> users = new();
+    private bool showAddModal = false;
+    private bool showEditModal = false;
+    private bool showResetPasswordModal = false;
+    private User? editingUser = null;
+    private User? resettingUser = null;
+
+    // Add form fields
+    private string newUserId = "";
+    private string newFirstName = "";
+    private string newLastName = "";
+    private string newEmail = "";
+    private string newRole = "";
+    private string newDepartment = "";
+    private string newPosition = "";
+    private string newPhoneNumber = "";
+    private string newStatus = "Active";
+
+    // Edit form fields
+    private string editFirstName = "";
+    private string editLastName = "";
+    private string editEmail = "";
+    private string editRole = "";
+    private string editDepartment = "";
+    private string editPosition = "";
+    private string editPhoneNumber = "";
+    private string editStatus = "Active";
+
+    // Messages and validation
+    private string errorMessage = "";
+    private string successMessage = "";
+    private List<string> validationErrors = new List<string>();
+    private List<string> editValidationErrors = new List<string>();
+
+    public class User
+    {
+        public string UserId { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string FullName => $"{FirstName} {LastName}";
+        public string Email { get; set; } = "";
+        public string Role { get; set; } = "";
+        public string Department { get; set; } = "";
+        public string Position { get; set; } = "";
+        public string PhoneNumber { get; set; } = "";
+        public string Status { get; set; } = "Active";
+        public DateTime? LastLogin { get; set; }
+        public DateTime CreatedDate { get; set; } = DateTime.Now;
+    }
+
+    protected override void OnInitialized()
+    {
+        LoadUsers();
+        GenerateNewUserId();
+    }
+
+    private void LoadUsers()
+    {
+        users = new List<User>
+        {
+            new User
+            {
+                UserId = "USR1001",
+                FirstName = "John",
+                LastName = "Smith",
+                Email = "john.smith@company.com",
+                Role = "Administrator",
+                Department = "Administration",
+                Position = "System Administrator",
+                PhoneNumber = "+63 912 345 6789",
+                Status = "Active",
+                LastLogin = DateTime.Now.AddHours(-2)
+            },
+            new User
+            {
+                UserId = "USR1002",
+                FirstName = "Maria",
+                LastName = "Garcia",
+                Email = "maria.garcia@company.com",
+                Role = "Manager",
+                Department = "Sales",
+                Position = "Sales Manager",
+                PhoneNumber = "+63 917 654 3210",
+                Status = "Active",
+                LastLogin = DateTime.Now.AddDays(-1)
+            },
+            new User
+            {
+                UserId = "USR1003",
+                FirstName = "James",
+                LastName = "Johnson",
+                Email = "james.johnson@company.com",
+                Role = "Staff",
+                Department = "Inventory",
+                Position = "Inventory Specialist",
+                PhoneNumber = "+63 918 765 4321",
+                Status = "Active",
+                LastLogin = DateTime.Now.AddDays(-3)
+            },
+            new User
+            {
+                UserId = "USR1004",
+                FirstName = "Sarah",
+                LastName = "Chen",
+                Email = "sarah.chen@company.com",
+                Role = "Staff",
+                Department = "Finance",
+                Position = "Finance Officer",
+                PhoneNumber = "+63 919 876 5432",
+                Status = "Inactive",
+                LastLogin = DateTime.Now.AddMonths(-2)
+            },
+            new User
+            {
+                UserId = "USR1005",
+                FirstName = "Michael",
+                LastName = "Tan",
+                Email = "michael.tan@company.com",
+                Role = "Viewer",
+                Department = "Operations",
+                Position = "Operations Analyst",
+                PhoneNumber = "+63 920 987 6543",
+                Status = "Active",
+                LastLogin = DateTime.Now.AddHours(-12)
+            }
+        };
+    }
+
+    private void GenerateNewUserId()
+    {
+        if (users.Any())
+        {
+            var lastId = users.Max(u => int.Parse(u.UserId.Replace("USR", "")));
+            newUserId = $"USR{lastId + 1}";
+        }
+        else
+        {
+            newUserId = "USR1001";
+        }
+    }
+
+    private IEnumerable<User> FilteredUsers
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return users;
+
+            return users.Where(u =>
+                u.FullName.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                u.Email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                u.Role.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                u.Department.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                u.Position.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                u.UserId.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    // Icon helper methods
+    private string GetRoleIcon(string role)
+    {
+        return role switch
+        {
+            "Administrator" => "fas fa-crown",
+            "Manager" => "fas fa-user-tie",
+            "Staff" => "fas fa-user",
+            "Viewer" => "fas fa-eye",
+            _ => "fas fa-user"
+        };
+    }
+
+    private string GetStatusIcon(string status)
+    {
+        return status switch
+        {
+            "Active" => "fas fa-check-circle",
+            "Inactive" => "fas fa-times-circle",
+            _ => "fas fa-question-circle"
+        };
+    }
+
+    // Modal Methods
+    private void ShowAddModal()
+    {
+        showAddModal = true;
+        ClearMessages();
+        ResetAddForm();
+        GenerateNewUserId();
+        StateHasChanged();
+    }
+
+    private void CloseAddModal()
+    {
+        showAddModal = false;
+        ResetAddForm();
+        StateHasChanged();
+    }
+
+    private void ShowEditModal(User user)
+    {
+        editingUser = user;
+        showEditModal = true;
+        ClearMessages();
+
+        // Populate edit form
+        editFirstName = user.FirstName;
+        editLastName = user.LastName;
+        editEmail = user.Email;
+        editRole = user.Role;
+        editDepartment = user.Department;
+        editPosition = user.Position;
+        editPhoneNumber = user.PhoneNumber;
+        editStatus = user.Status;
+
+        StateHasChanged();
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        editingUser = null;
+        ResetEditForm();
+        StateHasChanged();
+    }
+
+    private void ShowResetPasswordModal(User user)
+    {
+        resettingUser = user;
+        showResetPasswordModal = true;
+        ClearMessages();
+        StateHasChanged();
+    }
+
+    private void CloseResetPasswordModal()
+    {
+        showResetPasswordModal = false;
+        resettingUser = null;
+        StateHasChanged();
+    }
+
+    // Form Methods
+    private void ResetAddForm()
+    {
+        newFirstName = "";
+        newLastName = "";
+        newEmail = "";
+        newRole = "";
+        newDepartment = "";
+        newPosition = "";
+        newPhoneNumber = "";
+        newStatus = "Active";
+        validationErrors.Clear();
+    }
+
+    private void ResetEditForm()
+    {
+        editFirstName = "";
+        editLastName = "";
+        editEmail = "";
+        editRole = "";
+        editDepartment = "";
+        editPosition = "";
+        editPhoneNumber = "";
+        editStatus = "Active";
+        editValidationErrors.Clear();
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = "";
+        successMessage = "";
+        validationErrors.Clear();
+        editValidationErrors.Clear();
+    }
+
+    private void ClearErrorMessage() => errorMessage = "";
+    private void ClearSuccessMessage() => successMessage = "";
+
+    // Validation Methods
+    private void ValidateAddForm()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(newFirstName))
+            AddValidationError("FirstName", "First name is required");
+        else if (newFirstName.Length < 2)
+            AddValidationError("FirstName", "First name must be at least 2 characters long");
+
+        if (string.IsNullOrWhiteSpace(newLastName))
+            AddValidationError("LastName", "Last name is required");
+        else if (newLastName.Length < 2)
+            AddValidationError("LastName", "Last name must be at least 2 characters long");
+
+        if (string.IsNullOrWhiteSpace(newEmail))
+            AddValidationError("Email", "Email is required");
+        else if (!IsValidEmail(newEmail))
+            AddValidationError("Email", "Please enter a valid email address");
+
+        if (string.IsNullOrWhiteSpace(newRole))
+            AddValidationError("Role", "Role is required");
+
+        if (string.IsNullOrWhiteSpace(newDepartment))
+            AddValidationError("Department", "Department is required");
+
+        if (string.IsNullOrWhiteSpace(newStatus))
+            AddValidationError("Status", "Status is required");
+    }
+
+    private void ValidateEditForm()
+    {
+        editValidationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(editFirstName))
+            AddEditValidationError("FirstName", "First name is required");
+        else if (editFirstName.Length < 2)
+            AddEditValidationError("FirstName", "First name must be at least 2 characters long");
+
+        if (string.IsNullOrWhiteSpace(editLastName))
+            AddEditValidationError("LastName", "Last name is required");
+        else if (editLastName.Length < 2)
+            AddEditValidationError("LastName", "Last name must be at least 2 characters long");
+
+        if (string.IsNullOrWhiteSpace(editEmail))
+            AddEditValidationError("Email", "Email is required");
+        else if (!IsValidEmail(editEmail))
+            AddEditValidationError("Email", "Please enter a valid email address");
+
+        if (string.IsNullOrWhiteSpace(editRole))
+            AddEditValidationError("Role", "Role is required");
+
+        if (string.IsNullOrWhiteSpace(editDepartment))
+            AddEditValidationError("Department", "Department is required");
+
+        if (string.IsNullOrWhiteSpace(editStatus))
+            AddEditValidationError("Status", "Status is required");
+    }
+
+    private bool IsValidEmail(string email)
+    {
+        try
+        {
+            var addr = new System.Net.Mail.MailAddress(email);
+            return addr.Address == email;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private void AddValidationError(string field, string message)
+    {
+        validationErrors.Add($"{field}: {message}");
+    }
+
+    private void AddEditValidationError(string field, string message)
+    {
+        editValidationErrors.Add($"{field}: {message}");
+    }
+
+    private bool HasError(string field)
+    {
+        return validationErrors.Any(error => error.StartsWith($"{field}:"));
+    }
+
+    private bool HasEditError(string field)
+    {
+        return editValidationErrors.Any(error => error.StartsWith($"{field}:"));
+    }
+
+    private string GetError(string field)
+    {
+        return validationErrors.FirstOrDefault(error => error.StartsWith($"{field}:"))?.Split(':')[1]?.Trim() ?? "";
+    }
+
+    private string GetEditError(string field)
+    {
+        return editValidationErrors.FirstOrDefault(error => error.StartsWith($"{field}:"))?.Split(':')[1]?.Trim() ?? "";
+    }
+
+    private bool IsFormValid
+    {
+        get
+        {
+            ValidateAddForm();
+            return validationErrors.Count == 0 &&
+                   !string.IsNullOrWhiteSpace(newFirstName) &&
+                   !string.IsNullOrWhiteSpace(newLastName) &&
+                   !string.IsNullOrWhiteSpace(newEmail) &&
+                   !string.IsNullOrWhiteSpace(newRole) &&
+                   !string.IsNullOrWhiteSpace(newDepartment) &&
+                   !string.IsNullOrWhiteSpace(newStatus);
+        }
+    }
+
+    private bool IsEditFormValid
+    {
+        get
+        {
+            ValidateEditForm();
+            return editValidationErrors.Count == 0 &&
+                   !string.IsNullOrWhiteSpace(editFirstName) &&
+                   !string.IsNullOrWhiteSpace(editLastName) &&
+                   !string.IsNullOrWhiteSpace(editEmail) &&
+                   !string.IsNullOrWhiteSpace(editRole) &&
+                   !string.IsNullOrWhiteSpace(editDepartment) &&
+                   !string.IsNullOrWhiteSpace(editStatus);
+        }
+    }
+
+    // CRUD Operations
+    private void AddUser()
+    {
+        ValidateAddForm();
+
+        if (!IsFormValid)
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            return;
+        }
+
+        try
+        {
+            var newUser = new User
+            {
+                UserId = newUserId,
+                FirstName = newFirstName.Trim(),
+                LastName = newLastName.Trim(),
+                Email = newEmail.Trim().ToLower(),
+                Role = newRole,
+                Department = newDepartment,
+                Position = newPosition.Trim(),
+                PhoneNumber = newPhoneNumber.Trim(),
+                Status = newStatus,
+                CreatedDate = DateTime.Now,
+                LastLogin = null
+            };
+
+            users.Add(newUser);
+            successMessage = $"User '{newUser.FullName}' added successfully!";
+
+            CloseAddModal();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error adding user: {ex.Message}";
+        }
+    }
+
+    private void UpdateUser()
+    {
+        ValidateEditForm();
+
+        if (!IsEditFormValid || editingUser == null)
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            return;
+        }
+
+        try
+        {
+            var userToUpdate = users.FirstOrDefault(u => u.UserId == editingUser.UserId);
+            if (userToUpdate != null)
+            {
+                userToUpdate.FirstName = editFirstName.Trim();
+                userToUpdate.LastName = editLastName.Trim();
+                userToUpdate.Email = editEmail.Trim().ToLower();
+                userToUpdate.Role = editRole;
+                userToUpdate.Department = editDepartment;
+                userToUpdate.Position = editPosition.Trim();
+                userToUpdate.PhoneNumber = editPhoneNumber.Trim();
+                userToUpdate.Status = editStatus;
+
+                successMessage = $"User '{userToUpdate.FullName}' updated successfully!";
+            }
+
+            CloseEditModal();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating user: {ex.Message}";
+        }
+    }
+
+    private void ToggleUserStatus(User user)
+    {
+        try
+        {
+            var userToUpdate = users.FirstOrDefault(u => u.UserId == user.UserId);
+            if (userToUpdate != null)
+            {
+                userToUpdate.Status = userToUpdate.Status == "Active" ? "Inactive" : "Active";
+                successMessage = $"User '{userToUpdate.FullName}' has been {userToUpdate.Status.ToLower()}.";
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating user status: {ex.Message}";
+        }
+    }
+
+    private void ResetPassword()
+    {
+        if (resettingUser == null) return;
+
+        try
+        {
+            // In a real application, you would generate a temporary password and send it via email
+            successMessage = $"Password reset instructions have been sent to {resettingUser.Email}.";
+            CloseResetPasswordModal();
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error resetting password: {ex.Message}";
+        }
+    }
+
+    private async Task Logout()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}

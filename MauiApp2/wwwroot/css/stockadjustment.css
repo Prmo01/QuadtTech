@@ -1,4 +1,4 @@
-﻿/* Stock Out Page - Matching Sidebar Design */
+﻿/* Stock Adjustment Page - Matching Sidebar Design */
 .dashboard-wrapper {
     display: flex;
     min-height: 100vh;
@@ -25,8 +25,8 @@
         margin: 0;
     }
 
-/* Stock Out Container */
-.stock-out-container {
+/* Stock Adjustment Container */
+.stock-adjustment-container {
     background: #ffffff;
     border-radius: 12px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
@@ -123,15 +123,15 @@
         background: rgba(0, 0, 0, 0.1);
     }
 
-/* Add Stock Out Section */
-.add-stock-out-section {
+/* Add Adjustment Section */
+.add-adjustment-section {
     padding: 24px;
     border-bottom: 1px solid #e5e7eb;
     background: #f8fafc;
 }
 
-.btn-add-stock-out-main {
-    background: #dc2626;
+.btn-add-adjustment-main {
+    background: #7c3aed;
     color: white;
     border: none;
     padding: 12px 24px;
@@ -143,18 +143,17 @@
     display: flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 2px 4px rgba(220, 38, 38, 0.2);
+    box-shadow: 0 2px 4px rgba(124, 58, 237, 0.2);
 }
 
-    .btn-add-stock-out-main:hover {
-        background: #b91c1c;
+    .btn-add-adjustment-main:hover {
+        background: #6d28d9;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.3);
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.3);
     }
 
-.minus-icon {
-    font-size: 18px;
-    font-weight: bold;
+.adjust-icon {
+    font-size: 16px;
 }
 
 /* History Section */
@@ -197,6 +196,10 @@
     flex: 1;
     max-width: 400px;
     gap: 8px;
+}
+
+.filter-control {
+    min-width: 150px;
 }
 
 /* Form Controls */
@@ -300,40 +303,74 @@
     padding: 40px !important;
 }
 
-/* Reason Badges */
-.reason-badge {
-    padding: 4px 8px;
-    border-radius: 4px;
+    .no-data i {
+        margin-right: 8px;
+    }
+
+/* Adjustment Badges */
+.adjustment-badge {
+    padding: 6px 12px;
+    border-radius: 20px;
     font-size: 11px;
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
 }
 
-.reason-sale {
+.adjustment-increase {
     background: #d1fae5;
     color: #065f46;
 }
 
-.reason-damaged {
+.adjustment-decrease {
     background: #fee2e2;
     color: #991b1b;
 }
 
-.reason-expired {
+.adjustment-correction {
     background: #fef3c7;
     color: #92400e;
 }
 
-.reason-transfer {
-    background: #dbeafe;
-    color: #1e40af;
+/* Difference Indicators */
+.difference {
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 8px;
+    border-radius: 4px;
 }
 
-.reason-other {
-    background: #f3f4f6;
-    color: #374151;
+    .difference.positive {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .difference.negative {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .difference.neutral {
+        background: #f3f4f6;
+        color: #374151;
+    }
+
+/* Reason with Icons */
+.reason-with-icon {
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
+
+    .reason-with-icon i {
+        width: 16px;
+        color: #6b7280;
+    }
 
 /* Modal Styles */
 .modal-overlay {
@@ -386,6 +423,9 @@
         font-weight: 600;
         color: #1f2937;
         margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 8px;
     }
 
 .modal-close {
@@ -417,8 +457,8 @@
     background: #f8fafc;
 }
 
-/* Stock Out Form */
-.stock-out-form {
+/* Adjustment Form */
+.adjustment-form {
     display: flex;
     flex-direction: column;
     gap: 20px;
@@ -448,6 +488,9 @@
         font-size: 14px;
         font-weight: 500;
         color: #374151;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
 .required {
@@ -463,11 +506,10 @@
     font-size: 12px;
     color: #dc2626;
     margin-top: 4px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
 }
-
-    .field-error.warning {
-        color: #d97706;
-    }
 
 /* Date Input Wrapper */
 .date-input-wrapper {
@@ -487,6 +529,21 @@
         padding-left: 40px;
         width: 100%;
     }
+
+/* Quantity Info */
+.quantity-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 8px;
+    font-size: 12px;
+}
+
+.current-stock {
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
 
 /* Textarea */
 textarea.form-control {
@@ -509,6 +566,9 @@ textarea.form-control {
         font-weight: 600;
         color: #dc2626;
         margin: 0 0 8px 0;
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .validation-errors ul {
@@ -533,6 +593,9 @@ textarea.form-control {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
+    display: flex;
+    align-items: center;
+    gap: 6px;
 }
 
     .btn-cancel:hover {
@@ -541,7 +604,7 @@ textarea.form-control {
     }
 
 .btn-submit {
-    background: #2563eb;
+    background: #7c3aed;
     color: white;
     border: none;
     padding: 10px 20px;
@@ -550,29 +613,37 @@ textarea.form-control {
     font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    min-width: 120px;
+    min-width: 140px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
 }
 
     .btn-submit:hover:not(:disabled) {
-        background: #1d4ed8;
+        background: #6d28d9;
         transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+        box-shadow: 0 4px 12px rgba(124, 58, 237, 0.2);
     }
 
-.btn-submit-red {
-    background: #dc2626;
+    .btn-submit:disabled {
+        background: #9ca3af;
+        cursor: not-allowed;
+        transform: none;
+        box-shadow: none;
+    }
+
+/* Text Colors for Icons */
+.text-success {
+    color: #10b981;
 }
 
-    .btn-submit-red:hover:not(:disabled) {
-        background: #b91c1c;
-        box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-    }
+.text-danger {
+    color: #ef4444;
+}
 
-.btn-submit:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
+.text-warning {
+    color: #f59e0b;
 }
 
 /* Responsive Design */
@@ -609,7 +680,7 @@ textarea.form-control {
     }
 
     .history-table {
-        min-width: 1000px;
+        min-width: 1200px;
     }
 
     .modal-content {
@@ -623,7 +694,7 @@ textarea.form-control {
         padding: 20px;
     }
 
-    .add-stock-out-section {
+    .add-adjustment-section {
         padding: 20px;
     }
 }
@@ -663,5 +734,10 @@ textarea.form-control {
     .tab-button {
         padding: 12px 16px;
         font-size: 13px;
+    }
+
+    .quantity-info {
+        flex-direction: column;
+        gap: 4px;
     }
 }

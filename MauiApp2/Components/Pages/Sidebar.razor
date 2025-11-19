@@ -1,0 +1,151 @@
+﻿@using MauiApp2.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<link href="css/sidebar.css" rel="stylesheet" />
+
+<aside class="sidebar">
+    <!-- Company Header with Logo -->
+    <div class="company-header">
+        <div class="logo-container">
+            <img src="images/quad2.png" alt="QuadTech" class="company-logo" />
+        </div>
+    </div>
+
+    <!-- Navigation Menu -->
+    <nav class="nav-menu">
+        <a href="/dashboard" class="nav-item @GetNavItemClass("dashboard")">
+            <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
+            <span class="nav-text">Dashboard</span>
+        </a>
+
+        <!-- User Management with Dropdown -->
+        <div class="nav-section">
+            <div class="nav-item nav-section-header @GetNavItemClass("users")" @onclick="ToggleUserManagementMenu">
+                <span class="nav-icon"><i class="fas fa-users"></i></span>
+                <span class="nav-text">User Management</span>
+                <span class="nav-arrow">
+                    <i class="fas fa-chevron-down @(isUserManagementMenuOpen ? "open" : "")"></i>
+                </span>
+            </div>
+            @if (isUserManagementMenuOpen)
+            {
+                <div class="nav-submenu">
+                    <a href="/users" class="nav-subitem @GetNavItemClass("userlist")">
+                        <span class="nav-subicon"><i class="fas fa-list"></i></span>
+                        <span class="nav-subtext">User List</span>
+                    </a>
+                    <a href="/roles" class="nav-subitem @GetNavItemClass("roles")">
+                        <span class="nav-subicon"><i class="fas fa-user-shield"></i></span>
+                        <span class="nav-subtext">Roles & Permissions</span>
+                    </a>
+                </div>
+            }
+        </div>
+
+        <!-- Inventory Management with Dropdown -->
+        <div class="nav-section">
+            <div class="nav-item nav-section-header @GetNavItemClass("inventory")" @onclick="ToggleInventoryMenu">
+                <span class="nav-icon"><i class="fas fa-boxes"></i></span>
+                <span class="nav-text">Inventory Management</span>
+                <span class="nav-arrow">
+                    <i class="fas fa-chevron-down @(isInventoryMenuOpen ? "open" : "")"></i>
+                </span>
+            </div>
+            @if (isInventoryMenuOpen)
+            {
+                <div class="nav-submenu">
+                    <a href="/products" class="nav-subitem @GetNavItemClass("products")">
+                        <span class="nav-subicon"><i class="fas fa-list"></i></span>
+                        <span class="nav-subtext">Product List</span>
+                    </a>
+                    <a href="/purchase-orders" class="nav-subitem @GetNavItemClass("purchase-orders")">
+                        <span class="nav-subicon"><i class="fa-solid fa-cart-shopping"></i></span>
+                        <span class="nav-subtext">Purchase Order</span>
+                    </a>
+                    <a href="/stockout" class="nav-subitem @GetNavItemClass("stockout")">
+                        <span class="nav-subicon"><i class="fas fa-arrow-up"></i></span>
+                        <span class="nav-subtext">Stock Out</span>
+                    </a>
+                    <a href="/stockadjustment" class="nav-subitem @GetNavItemClass("stockadjustment")">
+                        <span class="nav-subicon"><i class="fas fa-exchange-alt"></i></span>
+                        <span class="nav-subtext">Stock Adjustment</span>
+                    </a>
+                    <a href="/category" class="nav-subitem @GetNavItemClass("category")">
+                        <span class="nav-subicon"><i class="fas fa-tags"></i></span>
+                        <span class="nav-subtext">Category</span>
+                    </a>
+                    <a href="/brand" class="nav-subitem @GetNavItemClass("brand")">
+                        <span class="nav-subicon"><i class="fas fa-copyright"></i></span>
+                        <span class="nav-subtext">Brand</span>
+                    </a>
+                    <a href="/transaction" class="nav-subitem @GetNavItemClass("transaction")">
+                        <span class="nav-subicon"><i class="fas fa-receipt"></i></span>
+                        <span class="nav-subtext">Transaction</span>
+                    </a>
+                </div>
+            }
+        </div>
+    </nav>
+
+    <!-- User Profile Section -->
+    <div class="user-section">
+        <div class="user-avatar">
+            <i class="fas fa-user"></i>
+        </div>
+        <div class="user-details">
+            <div class="user-name">@AuthService.CurrentUser</div>
+            <div class="user-role">Administrator</div>
+        </div>
+        <div class="user-menu">
+            <button class="user-menu-toggle" @onclick="ToggleUserMenu">
+                <i class="fas fa-ellipsis-v"></i>
+            </button>
+            @if (showUserMenu)
+            {
+                <div class="user-dropdown">
+                    <button class="dropdown-item" @onclick="Logout">
+                        <i class="fas fa-sign-out-alt"></i>
+                        <span>Logout</span>
+                    </button>
+                </div>
+            }
+        </div>
+    </div>
+</aside>
+
+@code {
+    private bool showUserMenu = false;
+    private bool isUserManagementMenuOpen = false;
+    private bool isInventoryMenuOpen = false;
+
+    [Parameter]
+    public string CurrentPage { get; set; } = "dashboard";
+
+    private void ToggleUserMenu()
+    {
+        showUserMenu = !showUserMenu;
+    }
+
+    private void ToggleUserManagementMenu()
+    {
+        isUserManagementMenuOpen = !isUserManagementMenuOpen;
+    }
+
+    private void ToggleInventoryMenu()
+    {
+        isInventoryMenuOpen = !isInventoryMenuOpen;
+    }
+
+    private string GetNavItemClass(string page)
+    {
+        return CurrentPage == page ? "active" : "";
+    }
+
+    private async Task Logout()
+    {
+        showUserMenu = false;
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/");
+    }
+}
