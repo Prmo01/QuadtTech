@@ -160,14 +160,10 @@
                             <select class="form-control @(HasError("Category") ? "input-error" : "")"
                                     @bind="newCategory">
                                 <option value="">Select Category</option>
-                                <option value="Refrigerator">Refrigerator</option>
-                                <option value="Television">Television</option>
-                                <option value="Air Conditioner">Air Conditioner</option>
-                                <option value="Washing Machine">Washing Machine</option>
-                                <option value="Kitchen Appliance">Kitchen Appliance</option>
-                                <option value="Small Appliance">Small Appliance</option>
-                                <option value="Audio Equipment">Audio Equipment</option>
-                                <option value="Other">Other</option>
+                                @foreach (var category in availableCategories)
+                                {
+                                    <option value="@category">@category</option>
+                                }
                             </select>
                             @if (HasError("Category"))
                             {
@@ -180,14 +176,10 @@
                             <select class="form-control @(HasError("Brand") ? "input-error" : "")"
                                     @bind="newBrand">
                                 <option value="">Select Brand</option>
-                                <option value="LG">LG</option>
-                                <option value="Samsung">Samsung</option>
-                                <option value="Panasonic">Panasonic</option>
-                                <option value="Sharp">Sharp</option>
-                                <option value="Toshiba">Toshiba</option>
-                                <option value="Sony">Sony</option>
-                                <option value="Whirlpool">Whirlpool</option>
-                                <option value="Other">Other</option>
+                                @foreach (var brand in availableBrands)
+                                {
+                                    <option value="@brand">@brand</option>
+                                }
                             </select>
                             @if (HasError("Brand"))
                             {
@@ -260,9 +252,10 @@
                             <select class="form-control @(HasError("Status") ? "input-error" : "")"
                                     @bind="newStatus">
                                 <option value="">Select Status</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Discontinued">Discontinued</option>
+                                @foreach (var status in availableStatuses)
+                                {
+                                    <option value="@status">@status</option>
+                                }
                             </select>
                             @if (HasError("Status"))
                             {
@@ -334,14 +327,10 @@
                             <select class="form-control @(HasEditError("Category") ? "input-error" : "")"
                                     @bind="editCategory">
                                 <option value="">Select Category</option>
-                                <option value="Refrigerator">Refrigerator</option>
-                                <option value="Television">Television</option>
-                                <option value="Air Conditioner">Air Conditioner</option>
-                                <option value="Washing Machine">Washing Machine</option>
-                                <option value="Kitchen Appliance">Kitchen Appliance</option>
-                                <option value="Small Appliance">Small Appliance</option>
-                                <option value="Audio Equipment">Audio Equipment</option>
-                                <option value="Other">Other</option>
+                                @foreach (var category in availableCategories)
+                                {
+                                    <option value="@category">@category</option>
+                                }
                             </select>
                             @if (HasEditError("Category"))
                             {
@@ -354,14 +343,10 @@
                             <select class="form-control @(HasEditError("Brand") ? "input-error" : "")"
                                     @bind="editBrand">
                                 <option value="">Select Brand</option>
-                                <option value="LG">LG</option>
-                                <option value="Samsung">Samsung</option>
-                                <option value="Panasonic">Panasonic</option>
-                                <option value="Sharp">Sharp</option>
-                                <option value="Toshiba">Toshiba</option>
-                                <option value="Sony">Sony</option>
-                                <option value="Whirlpool">Whirlpool</option>
-                                <option value="Other">Other</option>
+                                @foreach (var brand in availableBrands)
+                                {
+                                    <option value="@brand">@brand</option>
+                                }
                             </select>
                             @if (HasEditError("Brand"))
                             {
@@ -434,9 +419,10 @@
                             <select class="form-control @(HasEditError("Status") ? "input-error" : "")"
                                     @bind="editStatus">
                                 <option value="">Select Status</option>
-                                <option value="Active">Active</option>
-                                <option value="Inactive">Inactive</option>
-                                <option value="Discontinued">Discontinued</option>
+                                @foreach (var status in availableStatuses)
+                                {
+                                    <option value="@status">@status</option>
+                                }
                             </select>
                             @if (HasEditError("Status"))
                             {
@@ -470,6 +456,38 @@
     private bool showAddModal = false;
     private bool showEditModal = false;
     private Product? editingProduct = null;
+
+    // Available options for dropdowns
+    private List<string> availableCategories = new List<string>
+    {
+        "Refrigerator",
+        "Television", 
+        "Air Conditioner",
+        "Washing Machine",
+        "Kitchen Appliance",
+        "Small Appliance",
+        "Audio Equipment",
+        "Other"
+    };
+
+    private List<string> availableBrands = new List<string>
+    {
+        "LG",
+        "Samsung",
+        "Panasonic",
+        "Sharp",
+        "Toshiba",
+        "Sony",
+        "Whirlpool",
+        "Other"
+    };
+
+    private List<string> availableStatuses = new List<string>
+    {
+        "Active",
+        "Inactive", 
+        "Discontinued"
+    };
 
     // Add form fields
     private string newProductName = "";
@@ -524,74 +542,8 @@
 
     private void LoadProducts()
     {
-        products = new List<Product>
-        {
-            new Product
-            {
-                ProductId = "30235",
-                ProductName = "20 Cu. Ft. Side-by-Side Inverter Compressor Refrigerator",
-                Category = "Refrigerator",
-                Brand = "LG",
-                SKU = "LG-FRIDGE-20SBS",
-                ModelNumber = "LSXS26326S",
-                CostPrice = 32000.00m,
-                SellPrice = 40195.00m,
-                Status = "Active",
-                Quantity = 30
-            },
-            new Product
-            {
-                ProductId = "30236",
-                ProductName = "55-inch 4K UHD Smart TV",
-                Category = "Television",
-                Brand = "Samsung",
-                SKU = "SAMSUNG-TV-55UHD",
-                ModelNumber = "UN55AU8000",
-                CostPrice = 26000.00m,
-                SellPrice = 32999.00m,
-                Status = "Active",
-                Quantity = 15
-            },
-            new Product
-            {
-                ProductId = "30237",
-                ProductName = "Inverter Split Type Air Conditioner 1.5HP",
-                Category = "Air Conditioner",
-                Brand = "Panasonic",
-                SKU = "PANASONIC-AC-1.5HP",
-                ModelNumber = "CS-PC12QKH",
-                CostPrice = 22000.00m,
-                SellPrice = 28500.00m,
-                Status = "Active",
-                Quantity = 22
-            },
-            new Product
-            {
-                ProductId = "30238",
-                ProductName = "Front Load Washing Machine 8kg",
-                Category = "Washing Machine",
-                Brand = "LG",
-                SKU = "LG-WASHER-8KG",
-                ModelNumber = "F4J8JSP2T",
-                CostPrice = 20000.00m,
-                SellPrice = 25999.00m,
-                Status = "Active",
-                Quantity = 18
-            },
-            new Product
-            {
-                ProductId = "30239",
-                ProductName = "Microwave Oven 25L",
-                Category = "Kitchen Appliance",
-                Brand = "Sharp",
-                SKU = "SHARP-MW-25L",
-                ModelNumber = "R-25STM",
-                CostPrice = 4200.00m,
-                SellPrice = 5499.00m,
-                Status = "Active",
-                Quantity = 40
-            }
-        };
+        // Start with empty list - no hardcoded data
+        products = new List<Product>();
     }
 
     private IEnumerable<Product> FilteredProducts
@@ -710,6 +662,8 @@
 
         if (string.IsNullOrWhiteSpace(newSKU))
             AddValidationError("SKU", "SKU is required");
+        else if (products.Any(p => p.SKU.Equals(newSKU, StringComparison.OrdinalIgnoreCase)))
+            AddValidationError("SKU", "SKU already exists");
 
         if (string.IsNullOrWhiteSpace(newModelNumber))
             AddValidationError("ModelNumber", "Model number is required");
@@ -748,6 +702,8 @@
 
         if (string.IsNullOrWhiteSpace(editSKU))
             AddEditValidationError("SKU", "SKU is required");
+        else if (products.Any(p => p.SKU.Equals(editSKU, StringComparison.OrdinalIgnoreCase) && p.ProductId != editingProduct?.ProductId))
+            AddEditValidationError("SKU", "SKU already exists");
 
         if (string.IsNullOrWhiteSpace(editModelNumber))
             AddEditValidationError("ModelNumber", "Model number is required");
@@ -848,7 +804,7 @@
 
         try
         {
-            var newProductId = (products.Max(p => int.Parse(p.ProductId)) + 1).ToString();
+            var newProductId = products.Any() ? (products.Max(p => int.Parse(p.ProductId)) + 1).ToString() : "1";
 
             var newProduct = new Product
             {

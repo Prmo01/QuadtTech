@@ -1,27 +1,27 @@
-﻿@page "/categories"
+﻿@page "/brands"
 @layout MainLayout
 @using MauiApp2.Services
 @using MauiApp2.Models
 @using Microsoft.JSInterop
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
-@inject ICategoryService CategoryService
+@inject IBrandService BrandService
 @inject IJSRuntime JSRuntime
 
-<link href="css/category.css" rel="stylesheet" />
+<link href="css/brand.css" rel="stylesheet" />
 
 <div class="dashboard-wrapper">
     <Sidebar />
 
     <div class="main-content">
         <div class="content-header">
-            <h1>Category Management</h1>
+            <h1>Brand Management</h1>
         </div>
 
         <div class="brand-management">
             <div class="tab-section">
                 <div class="tabs">
-                    <button class="tab active">Category List</button>
+                    <button class="tab active">Brand List</button>
                 </div>
             </div>
 
@@ -50,19 +50,19 @@
                 {
                     <div class="loading-indicator">
                         <div class="spinner"></div>
-                        <span>Loading categories...</span>
+                        <span>Loading brands...</span>
                     </div>
                 }
 
                 <div class="brand-toolbar">
                     <button class="add-brand-btn" @onclick="ShowAddModal" disabled="@isLoading">
-                        Add Category
+                        Add Brand
                     </button>
 
                     <div class="brand-search-container">
                         <input type="text"
                                class="brand-search-input"
-                               placeholder="Search categories..."
+                               placeholder="Search brands..."
                                @bind="searchQuery"
                                @bind:event="oninput"
                                disabled="@isLoading" />
@@ -73,25 +73,25 @@
                 <table class="brand-table">
                     <thead>
                         <tr>
-                            <th>Category ID</th>
-                            <th>Category Name</th>
+                            <th>Brand ID</th>
+                            <th>Brand Name</th>
                             <th>Description</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
                     <tbody>
-                        @if (FilteredCategories.Any())
+                        @if (FilteredBrands.Any())
                         {
-                            @foreach (var category in FilteredCategories)
+                            @foreach (var brand in FilteredBrands)
                             {
                                 <tr>
-                                    <td>@category.category_id</td>
-                                    <td>@category.category_name</td>
+                                    <td>@brand.brand_id</td>
+                                    <td>@brand.brand_name</td>
                                     <td>
                                         <div class="brand-description">
-                                            @if (!string.IsNullOrEmpty(category.description))
+                                            @if (!string.IsNullOrEmpty(brand.description))
                                             {
-                                                <span class="description-text">@category.description</span>
+                                                <span class="description-text">@brand.description</span>
                                             }
                                             else
                                             {
@@ -101,15 +101,15 @@
                                     </td>
                                     <td>
                                         <button class="brand-edit-btn" 
-                                                @onclick="() => ShowEditModal(category)"
+                                                @onclick="() => ShowEditModal(brand)"
                                                 disabled="@isLoading">
                                             Edit
                                         </button>
-                                        <!--<button class="brand-delete-btn" 
-                                                @onclick="() => DeleteCategory(category.category_id)"
+                                        <button class="brand-delete-btn" 
+                                                @onclick="() => DeleteBrand(brand.brand_id)"
                                                 disabled="@isLoading">
                                             Delete
-                                        </button>-->
+                                        </button>
                                     </td>
                                 </tr>
                             }
@@ -120,11 +120,11 @@
                                 <td colspan="4" style="text-align: center; padding: 40px; color: #6b7280;">
                                     @if (string.IsNullOrWhiteSpace(searchQuery))
                                     {
-                                        <span>No categories found. Click "Add Category" to add your first category.</span>
+                                        <span>No brands found. Click "Add Brand" to add your first brand.</span>
                                     }
                                     else
                                     {
-                                        <span>No categories match your search criteria.</span>
+                                        <span>No brands match your search criteria.</span>
                                     }
                                 </td>
                             </tr>
@@ -136,13 +136,13 @@
     </div>
 </div>
 
-<!-- Add Category Modal -->
+<!-- Add Brand Modal -->
 @if (showAddModal)
 {
     <div class="brand-modal-overlay" @onclick="CloseAddModal">
         <div class="brand-modal-content" @onclick:stopPropagation="true">
             <div class="brand-modal-header">
-                <h3>Add New Category</h3>
+                <h3>Add New Brand</h3>
                 <button class="brand-modal-close" @onclick="CloseAddModal">×</button>
             </div>
             <div class="brand-modal-body">
@@ -162,16 +162,16 @@
 
                 <div class="brand-form-container">
                     <div class="brand-form-group">
-                        <label>Category Name *</label>
+                        <label>Brand Name *</label>
                         <input type="text"
-                               class="brand-form-control @(HasError("CategoryName") ? "input-error" : "")"
-                               @bind="newCategoryName"
-                               placeholder="Enter category name"
+                               class="brand-form-control @(HasError("BrandName") ? "input-error" : "")"
+                               @bind="newBrandName"
+                               placeholder="Enter brand name"
                                maxlength="100"
                                disabled="@isLoading" />
-                        @if (HasError("CategoryName"))
+                        @if (HasError("BrandName"))
                         {
-                            <span class="brand-field-error">@GetError("CategoryName")</span>
+                            <span class="brand-field-error">@GetError("BrandName")</span>
                         }
                     </div>
 
@@ -179,7 +179,7 @@
                         <label>Description</label>
                         <textarea class="brand-form-control brand-textarea"
                                   @bind="newDescription"
-                                  placeholder="Enter category description (optional)"
+                                  placeholder="Enter brand description (optional)"
                                   maxlength="500"
                                   rows="4"
                                   disabled="@isLoading"></textarea>
@@ -191,25 +191,25 @@
             </div>
             <div class="brand-modal-footer">
                 <button class="brand-btn-cancel" @onclick="CloseAddModal" disabled="@isLoading">Cancel</button>
-                <button class="brand-btn-submit" @onclick="AddCategory" disabled="@(!IsFormValid || isLoading)">
+                <button class="brand-btn-submit" @onclick="AddBrand" disabled="@(!IsFormValid || isLoading)">
                     @if (isLoading)
                     {
                         <span class="button-spinner"></span>
                     }
-                    Add Category
+                    Add Brand
                 </button>
             </div>
         </div>
     </div>
 }
 
-<!-- Edit Category Modal -->
-@if (showEditModal && editingCategory != null)
+<!-- Edit Brand Modal -->
+@if (showEditModal && editingBrand != null)
 {
     <div class="brand-modal-overlay" @onclick="CloseEditModal">
         <div class="brand-modal-content" @onclick:stopPropagation="true">
             <div class="brand-modal-header">
-                <h3>Edit Category</h3>
+                <h3>Edit Brand</h3>
                 <button class="brand-modal-close" @onclick="CloseEditModal">×</button>
             </div>
             <div class="brand-modal-body">
@@ -229,16 +229,16 @@
 
                 <div class="brand-form-container">
                     <div class="brand-form-group">
-                        <label>Category Name *</label>
+                        <label>Brand Name *</label>
                         <input type="text"
-                               class="brand-form-control @(HasEditError("CategoryName") ? "input-error" : "")"
-                               @bind="editCategoryName"
-                               placeholder="Enter category name"
+                               class="brand-form-control @(HasEditError("BrandName") ? "input-error" : "")"
+                               @bind="editBrandName"
+                               placeholder="Enter brand name"
                                maxlength="100"
                                disabled="@isLoading" />
-                        @if (HasEditError("CategoryName"))
+                        @if (HasEditError("BrandName"))
                         {
-                            <span class="brand-field-error">@GetEditError("CategoryName")</span>
+                            <span class="brand-field-error">@GetEditError("BrandName")</span>
                         }
                     </div>
 
@@ -246,7 +246,7 @@
                         <label>Description</label>
                         <textarea class="brand-form-control brand-textarea"
                                   @bind="editDescription"
-                                  placeholder="Enter category description (optional)"
+                                  placeholder="Enter brand description (optional)"
                                   maxlength="500"
                                   rows="4"
                                   disabled="@isLoading"></textarea>
@@ -258,12 +258,12 @@
             </div>
             <div class="brand-modal-footer">
                 <button class="brand-btn-cancel" @onclick="CloseEditModal" disabled="@isLoading">Cancel</button>
-                <button class="brand-btn-submit" @onclick="UpdateCategory" disabled="@(!IsEditFormValid || isLoading)">
+                <button class="brand-btn-submit" @onclick="UpdateBrand" disabled="@(!IsEditFormValid || isLoading)">
                     @if (isLoading)
                     {
                         <span class="button-spinner"></span>
                     }
-                    Update Category
+                    Update Brand
                 </button>
             </div>
         </div>
@@ -272,18 +272,18 @@
 
 @code {
     private string searchQuery = "";
-    private List<MauiApp2.Models.Category> categories = new();
+    private List<MauiApp2.Models.Brand> brands = new();
     private bool showAddModal = false;
     private bool showEditModal = false;
-    private MauiApp2.Models.Category? editingCategory = null;
+    private MauiApp2.Models.Brand? editingBrand = null;
     private bool isLoading = false;
 
     // Add form fields
-    private string newCategoryName = "";
+    private string newBrandName = "";
     private string newDescription = "";
 
     // Edit form fields
-    private string editCategoryName = "";
+    private string editBrandName = "";
     private string editDescription = "";
 
     // Messages and validation
@@ -294,10 +294,10 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCategories();
+        await LoadBrands();
     }
 
-    private async Task LoadCategories()
+    private async Task LoadBrands()
     {
         try
         {
@@ -305,11 +305,11 @@
             errorMessage = "";
             StateHasChanged();
 
-            categories = await CategoryService.GetCategoriesAsync();
+            brands = await BrandService.GetBrandsAsync();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error loading categories: {ex.Message}";
+            errorMessage = $"Error loading brands: {ex.Message}";
             Console.WriteLine($"Error: {ex.Message}");
         }
         finally
@@ -319,17 +319,17 @@
         }
     }
 
-    private IEnumerable<MauiApp2.Models.Category> FilteredCategories
+    private IEnumerable<MauiApp2.Models.Brand> FilteredBrands
     {
         get
         {
             if (string.IsNullOrWhiteSpace(searchQuery))
-                return categories;
+                return brands;
 
-            return categories.Where(c =>
-                c.category_name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
-                (c.description != null && c.description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
-                c.category_id.ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+            return brands.Where(b =>
+                b.brand_name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                (b.description != null && b.description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
+                b.brand_id.ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
     }
 
@@ -349,15 +349,15 @@
         StateHasChanged();
     }
 
-    private void ShowEditModal(MauiApp2.Models.Category category)
+    private void ShowEditModal(MauiApp2.Models.Brand brand)
     {
-        editingCategory = category;
+        editingBrand = brand;
         showEditModal = true;
         ClearMessages();
 
         // Populate edit form
-        editCategoryName = category.category_name;
-        editDescription = category.description ?? "";
+        editBrandName = brand.brand_name;
+        editDescription = brand.description ?? "";
 
         StateHasChanged();
     }
@@ -365,7 +365,7 @@
     private void CloseEditModal()
     {
         showEditModal = false;
-        editingCategory = null;
+        editingBrand = null;
         ResetEditForm();
         StateHasChanged();
     }
@@ -373,14 +373,14 @@
     // Form Methods
     private void ResetAddForm()
     {
-        newCategoryName = "";
+        newBrandName = "";
         newDescription = "";
         validationErrors.Clear();
     }
 
     private void ResetEditForm()
     {
-        editCategoryName = "";
+        editBrandName = "";
         editDescription = "";
         editValidationErrors.Clear();
     }
@@ -401,24 +401,24 @@
     {
         validationErrors.Clear();
 
-        if (string.IsNullOrWhiteSpace(newCategoryName))
-            AddValidationError("CategoryName", "Category name is required");
-        else if (newCategoryName.Length < 2)
-            AddValidationError("CategoryName", "Category name must be at least 2 characters long");
-        else if (categories.Any(c => c.category_name.Equals(newCategoryName, StringComparison.OrdinalIgnoreCase)))
-            AddValidationError("CategoryName", "Category name already exists");
+        if (string.IsNullOrWhiteSpace(newBrandName))
+            AddValidationError("BrandName", "Brand name is required");
+        else if (newBrandName.Length < 2)
+            AddValidationError("BrandName", "Brand name must be at least 2 characters long");
+        else if (brands.Any(b => b.brand_name.Equals(newBrandName, StringComparison.OrdinalIgnoreCase)))
+            AddValidationError("BrandName", "Brand name already exists");
     }
 
     private void ValidateEditForm()
     {
         editValidationErrors.Clear();
 
-        if (string.IsNullOrWhiteSpace(editCategoryName))
-            AddEditValidationError("CategoryName", "Category name is required");
-        else if (editCategoryName.Length < 2)
-            AddEditValidationError("CategoryName", "Category name must be at least 2 characters long");
-        else if (categories.Any(c => c.category_name.Equals(editCategoryName, StringComparison.OrdinalIgnoreCase) && c.category_id != editingCategory?.category_id))
-            AddEditValidationError("CategoryName", "Category name already exists");
+        if (string.IsNullOrWhiteSpace(editBrandName))
+            AddEditValidationError("BrandName", "Brand name is required");
+        else if (editBrandName.Length < 2)
+            AddEditValidationError("BrandName", "Brand name must be at least 2 characters long");
+        else if (brands.Any(b => b.brand_name.Equals(editBrandName, StringComparison.OrdinalIgnoreCase) && b.brand_id != editingBrand?.brand_id))
+            AddEditValidationError("BrandName", "Brand name already exists");
     }
 
     private void AddValidationError(string field, string message)
@@ -456,7 +456,7 @@
         get
         {
             ValidateAddForm();
-            return validationErrors.Count == 0 && !string.IsNullOrWhiteSpace(newCategoryName);
+            return validationErrors.Count == 0 && !string.IsNullOrWhiteSpace(newBrandName);
         }
     }
 
@@ -465,12 +465,12 @@
         get
         {
             ValidateEditForm();
-            return editValidationErrors.Count == 0 && !string.IsNullOrWhiteSpace(editCategoryName);
+            return editValidationErrors.Count == 0 && !string.IsNullOrWhiteSpace(editBrandName);
         }
     }
 
     // CRUD Operations
-    private async Task AddCategory()
+    private async Task AddBrand()
     {
         ValidateAddForm();
 
@@ -485,22 +485,22 @@
             isLoading = true;
             StateHasChanged();
 
-            var newCategory = new MauiApp2.Models.Category
+            var newBrand = new MauiApp2.Models.Brand
             {
-                category_name = newCategoryName.Trim(),
+                brand_name = newBrandName.Trim(),
                 description = string.IsNullOrWhiteSpace(newDescription) ? null : newDescription.Trim()
             };
 
-            var categoryId = await CategoryService.CreateCategoryAsync(newCategory);
+            var brandId = await BrandService.CreateBrandAsync(newBrand);
             
-            successMessage = $"Category '{newCategoryName}' added successfully!";
+            successMessage = $"Brand '{newBrandName}' added successfully!";
             
-            await LoadCategories(); // Refresh the list
+            await LoadBrands(); // Refresh the list
             CloseAddModal();
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error adding category: {ex.Message}";
+            errorMessage = $"Error adding brand: {ex.Message}";
         }
         finally
         {
@@ -509,11 +509,11 @@
         }
     }
 
-    private async Task UpdateCategory()
+    private async Task UpdateBrand()
     {
         ValidateEditForm();
 
-        if (!IsEditFormValid || editingCategory == null)
+        if (!IsEditFormValid || editingBrand == null)
         {
             errorMessage = "Please fix the validation errors before submitting.";
             return;
@@ -524,29 +524,29 @@
             isLoading = true;
             StateHasChanged();
 
-            var updatedCategory = new MauiApp2.Models.Category
+            var updatedBrand = new MauiApp2.Models.Brand
             {
-                category_id = editingCategory.category_id,
-                category_name = editCategoryName.Trim(),
+                brand_id = editingBrand.brand_id,
+                brand_name = editBrandName.Trim(),
                 description = string.IsNullOrWhiteSpace(editDescription) ? null : editDescription.Trim()
             };
 
-            var success = await CategoryService.UpdateCategoryAsync(updatedCategory);
+            var success = await BrandService.UpdateBrandAsync(updatedBrand);
             
             if (success)
             {
-                successMessage = $"Category '{editCategoryName}' updated successfully!";
-                await LoadCategories(); // Refresh the list
+                successMessage = $"Brand '{editBrandName}' updated successfully!";
+                await LoadBrands(); // Refresh the list
                 CloseEditModal();
             }
             else
             {
-                errorMessage = "Failed to update category. Please try again.";
+                errorMessage = "Failed to update brand. Please try again.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error updating category: {ex.Message}";
+            errorMessage = $"Error updating brand: {ex.Message}";
         }
         finally
         {
@@ -555,12 +555,12 @@
         }
     }
 
-    private async Task DeleteCategory(int categoryId)
+    private async Task DeleteBrand(int brandId)
     {
-        var categoryToDelete = categories.FirstOrDefault(c => c.category_id == categoryId);
-        if (categoryToDelete == null) return;
+        var brandToDelete = brands.FirstOrDefault(b => b.brand_id == brandId);
+        if (brandToDelete == null) return;
 
-        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete category '{categoryToDelete.category_name}'?"))
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete brand '{brandToDelete.brand_name}'?"))
             return;
 
         try
@@ -568,21 +568,21 @@
             isLoading = true;
             StateHasChanged();
 
-            var success = await CategoryService.DeleteCategoryAsync(categoryId);
+            var success = await BrandService.DeleteBrandAsync(brandId);
             
             if (success)
             {
-                successMessage = $"Category '{categoryToDelete.category_name}' deleted successfully!";
-                await LoadCategories(); // Refresh the list
+                successMessage = $"Brand '{brandToDelete.brand_name}' deleted successfully!";
+                await LoadBrands(); // Refresh the list
             }
             else
             {
-                errorMessage = "Failed to delete category. Please try again.";
+                errorMessage = "Failed to delete brand. Please try again.";
             }
         }
         catch (Exception ex)
         {
-            errorMessage = $"Error deleting category: {ex.Message}";
+            errorMessage = $"Error deleting brand: {ex.Message}";
         }
         finally
         {

@@ -18,6 +18,8 @@ public static class MauiProgram
 
         // Register AuthService
         builder.Services.AddSingleton<IAuthService, AuthService>();
+        builder.Services.AddScoped<IBrandService, BrandService>();
+        builder.Services.AddScoped<ICategoryService, CategoryService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
