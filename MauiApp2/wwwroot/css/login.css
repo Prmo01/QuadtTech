@@ -51,12 +51,12 @@ body {
 }
 
 .logo-container {
-    margin-bottom: 30px;
+    margin-bottom: 10px;
 }
 
 .logo {
-    width: 270px;
-    height: 120px;
+    width: 200px;
+    height: 110px;
     filter: brightness(0) invert(1);
 }
 
@@ -447,8 +447,8 @@ body {
     }
 
     .logo {
-        width: 100px;
-        height: 85px;
+        width: 150px;
+        height: 100px;
     }
 
     .form-options {

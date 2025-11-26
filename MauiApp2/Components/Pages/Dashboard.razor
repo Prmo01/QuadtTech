@@ -4,195 +4,181 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
+<link href="css/dashboard.css" rel="stylesheet" />
+
 <div class="dashboard-wrapper">
     <Sidebar />
-
     <main class="main-content">
         <!-- Header with Dashboard title -->
         <header class="header">
             <h1 class="page-title">Dashboard</h1>
         </header>
 
-        <div class="stats-grid">
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Total Users</span>
-                    <div class="stat-icon user-icon-bg">
-                        <i class="fas fa-users"></i>
-                    </div>
-                </div>
-                <div class="stat-value">30,689</div>
-                <div class="stat-trend positive">
-                    <span class="trend-icon"><i class="fas fa-arrow-up"></i></span>
-                    <span class="trend-text">6.5% from last week</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Total Orders</span>
-                    <div class="stat-icon order-icon-bg">
-                        <i class="fas fa-shopping-cart"></i>
-                    </div>
-                </div>
-                <div class="stat-value">10,293</div>
-                <div class="stat-trend positive">
-                    <span class="trend-icon"><i class="fas fa-arrow-up"></i></span>
-                    <span class="trend-text">1.5% from last week</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Total Sales</span>
-                    <div class="stat-icon sales-icon-bg">
-                        <i class="fas fa-chart-bar"></i>
-                    </div>
-                </div>
-                <div class="stat-value">₱30,000</div>
-                <div class="stat-trend negative">
-                    <span class="trend-icon"><i class="fas fa-arrow-down"></i></span>
-                    <span class="trend-text">4.9% from yesterday</span>
-                </div>
-            </div>
-
-            <div class="stat-card">
-                <div class="stat-header">
-                    <span class="stat-label">Pending Orders</span>
-                    <div class="stat-icon pending-icon-bg">
-                        <i class="fas fa-clock"></i>
-                    </div>
-                </div>
-                <div class="stat-value">2,040</div>
-                <div class="stat-trend positive">
-                    <span class="trend-icon"><i class="fas fa-arrow-up"></i></span>
-                    <span class="trend-text">1.3% from last week</span>
-                </div>
-            </div>
-        </div>
-
-        <div class="chart-section">
-            <div class="chart-container">
-                <div class="chart-header">
-                    <div class="chart-title-section">
-                        <h2 class="chart-title">Sales Analytics</h2>
-                        <p class="chart-subtitle">Monthly revenue performance and trends</p>
-                    </div>
-                    <div class="chart-controls">
-                        <select class="period-selector">
-                            <option>Last 7 Days</option>
-                            <option>Last 30 Days</option>
-                            <option selected>Last 90 Days</option>
-                            <option>This Year</option>
-                        </select>
-                        <div class="chart-legend">
-                            <div class="legend-item">
-                                <span class="legend-color sales-color"></span>
-                                <span class="legend-label">Sales</span>
+        <div class="dashboard-section">
+            <div class="stats-container">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Total Users</span>
+                            <div class="stat-icon user-icon-bg">
+                                <i class="fas fa-users"></i>
                             </div>
-                            <div class="legend-item">
-                                <span class="legend-color target-color"></span>
-                                <span class="legend-label">Target</span>
+                        </div>
+                        <div class="stat-value">30,689</div>
+                        <div class="">
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Total Orders</span>
+                            <div class="stat-icon order-icon-bg">
+                                <i class="fas fa-shopping-cart"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">10,293</div>
+                        <div class="">
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Total Sales</span>
+                            <div class="stat-icon sales-icon-bg">
+                                <i class="fas fa-chart-bar"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">₱30,000</div>
+                        <div class="">
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-header">
+                            <span class="stat-label">Pending Orders</span>
+                            <div class="stat-icon pending-icon-bg">
+                                <i class="fas fa-clock"></i>
+                            </div>
+                        </div>
+                        <div class="stat-value">2,040</div>
+                        <div class="">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="chart-section">
+                <div class="chart-container">
+                    <div class="chart-header">
+                        <div class="chart-title-section">
+                            <h2 class="chart-title">Sales Analytics</h2>
+                            <p class="chart-subtitle">Monthly revenue performance and trends</p>
+                        </div>
+                        <div class="chart-controls">
+                            <select class="period-selector">
+                                <option>Last 7 Days</option>
+                                <option>Last 30 Days</option>
+                                <option selected>Last 90 Days</option>
+                                <option>This Year</option>
+                            </select>
+                            <div class="chart-legend">
+                                <div class="legend-item">
+                                    <span class="legend-color sales-color"></span>
+                                    <span class="legend-label">Sales</span>
+                                </div>
+                                <div class="legend-item">
+                                    <span class="legend-color target-color"></span>
+                                    <span class="legend-label">Target</span>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <div class="chart-metrics">
-                    <div class="metric-card">
-                        <div class="metric-value">₱125,430</div>
-                        <div class="metric-label">Total Revenue</div>
-                        <div class="metric-trend positive">
-                            <i class="fas fa-arrow-up"></i>
-                            <span>12.3%</span>
+                    <div class="chart-metrics">
+                        <div class="metric-card">
+                            <div class="metric-value">₱125,430</div>
+                            <div class="metric-label">Total Revenue</div>
+                            <div class="metric-trend positive">
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">₱98,760</div>
+                            <div class="metric-label">Average Monthly</div>
+                            <div class="metric-trend positive">
+                            </div>
+                        </div>
+                        <div class="metric-card">
+                            <div class="metric-value">1,247</div>
+                            <div class="metric-label">Transactions</div>
+                            <div class="metric-trend positive">
+                            </div>
                         </div>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-value">₱98,760</div>
-                        <div class="metric-label">Average Monthly</div>
-                        <div class="metric-trend positive">
-                            <i class="fas fa-arrow-up"></i>
-                            <span>8.7%</span>
-                        </div>
+                    <div class="chart-wrapper">
+                        <svg viewBox="0 0 1000 450" class="line-chart">
+                            <!-- Grid Lines -->
+                            <line x1="80" y1="50" x2="80" y2="380" stroke="#f0f0f0" stroke-width="1" />
+                            <line x1="80" y1="380" x2="920" y2="380" stroke="#f0f0f0" stroke-width="1" />
+
+                            <!-- Horizontal Grid Lines -->
+                            <line x1="80" y1="320" x2="920" y2="320" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
+                            <line x1="80" y1="260" x2="920" y2="260" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
+                            <line x1="80" y1="200" x2="920" y2="200" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
+                            <line x1="80" y1="140" x2="920" y2="140" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
+                            <line x1="80" y1="80" x2="920" y2="80" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
+
+                            <!-- Y-axis Labels -->
+                            <text x="40" y="385" font-size="12" fill="#666" text-anchor="end">₱0</text>
+                            <text x="40" y="325" font-size="12" fill="#666" text-anchor="end">₱25k</text>
+                            <text x="40" y="265" font-size="12" fill="#666" text-anchor="end">₱50k</text>
+                            <text x="40" y="205" font-size="12" fill="#666" text-anchor="end">₱75k</text>
+                            <text x="40" y="145" font-size="12" fill="#666" text-anchor="end">₱100k</text>
+                            <text x="40" y="85" font-size="12" fill="#666" text-anchor="end">₱125k</text>
+
+                            <!-- X-axis Labels -->
+                            <text x="120" y="400" font-size="11" fill="#666" text-anchor="middle">Jan</text>
+                            <text x="220" y="400" font-size="11" fill="#666" text-anchor="middle">Feb</text>
+                            <text x="320" y="400" font-size="11" fill="#666" text-anchor="middle">Mar</text>
+                            <text x="420" y="400" font-size="11" fill="#666" text-anchor="middle">Apr</text>
+                            <text x="520" y="400" font-size="11" fill="#666" text-anchor="middle">May</text>
+                            <text x="620" y="400" font-size="11" fill="#666" text-anchor="middle">Jun</text>
+                            <text x="720" y="400" font-size="11" fill="#666" text-anchor="middle">Jul</text>
+                            <text x="820" y="400" font-size="11" fill="#666" text-anchor="middle">Aug</text>
+
+                            <!-- Sales Line -->
+                            <polyline points="120,300 220,280 320,320 420,250 520,180 620,220 720,150 820,120"
+                                      fill="none"
+                                      stroke="#3b82f6"
+                                      stroke-width="3"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round" />
+
+                            <!-- Target Line -->
+                            <polyline points="120,280 220,260 320,300 420,280 520,240 620,260 720,220 820,200"
+                                      fill="none"
+                                      stroke="#10b981"
+                                      stroke-width="2"
+                                      stroke-linecap="round"
+                                      stroke-linejoin="round"
+                                      stroke-dasharray="5,3" />
+
+                            <!-- Data Points - Sales -->
+                            <circle cx="120" cy="300" r="4" fill="#3b82f6" />
+                            <circle cx="220" cy="280" r="4" fill="#3b82f6" />
+                            <circle cx="320" cy="320" r="4" fill="#3b82f6" />
+                            <circle cx="420" cy="250" r="4" fill="#3b82f6" />
+                            <circle cx="520" cy="180" r="4" fill="#3b82f6" />
+                            <circle cx="620" cy="220" r="4" fill="#3b82f6" />
+                            <circle cx="720" cy="150" r="4" fill="#3b82f6" />
+                            <circle cx="820" cy="120" r="4" fill="#3b82f6" />
+
+                            <!-- Data Points - Target -->
+                            <circle cx="120" cy="280" r="3" fill="#10b981" />
+                            <circle cx="220" cy="260" r="3" fill="#10b981" />
+                            <circle cx="320" cy="300" r="3" fill="#10b981" />
+                            <circle cx="420" cy="280" r="3" fill="#10b981" />
+                            <circle cx="520" cy="240" r="3" fill="#10b981" />
+                            <circle cx="620" cy="260" r="3" fill="#10b981" />
+                            <circle cx="720" cy="220" r="3" fill="#10b981" />
+                            <circle cx="820" cy="200" r="3" fill="#10b981" />
+                        </svg>
                     </div>
-                    <div class="metric-card">
-                        <div class="metric-value">1,247</div>
-                        <div class="metric-label">Transactions</div>
-                        <div class="metric-trend positive">
-                            <i class="fas fa-arrow-up"></i>
-                            <span>5.2%</span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="chart-wrapper">
-                    <svg viewBox="0 0 1000 450" class="line-chart">
-                        <!-- Grid Lines -->
-                        <line x1="80" y1="50" x2="80" y2="380" stroke="#f0f0f0" stroke-width="1" />
-                        <line x1="80" y1="380" x2="920" y2="380" stroke="#f0f0f0" stroke-width="1" />
-
-                        <!-- Horizontal Grid Lines -->
-                        <line x1="80" y1="320" x2="920" y2="320" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
-                        <line x1="80" y1="260" x2="920" y2="260" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
-                        <line x1="80" y1="200" x2="920" y2="200" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
-                        <line x1="80" y1="140" x2="920" y2="140" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
-                        <line x1="80" y1="80" x2="920" y2="80" stroke="#f0f0f0" stroke-width="1" stroke-dasharray="3,3" />
-
-                        <!-- Y-axis Labels -->
-                        <text x="40" y="385" font-size="12" fill="#666" text-anchor="end">₱0</text>
-                        <text x="40" y="325" font-size="12" fill="#666" text-anchor="end">₱25k</text>
-                        <text x="40" y="265" font-size="12" fill="#666" text-anchor="end">₱50k</text>
-                        <text x="40" y="205" font-size="12" fill="#666" text-anchor="end">₱75k</text>
-                        <text x="40" y="145" font-size="12" fill="#666" text-anchor="end">₱100k</text>
-                        <text x="40" y="85" font-size="12" fill="#666" text-anchor="end">₱125k</text>
-
-                        <!-- X-axis Labels -->
-                        <text x="120" y="400" font-size="11" fill="#666" text-anchor="middle">Jan</text>
-                        <text x="220" y="400" font-size="11" fill="#666" text-anchor="middle">Feb</text>
-                        <text x="320" y="400" font-size="11" fill="#666" text-anchor="middle">Mar</text>
-                        <text x="420" y="400" font-size="11" fill="#666" text-anchor="middle">Apr</text>
-                        <text x="520" y="400" font-size="11" fill="#666" text-anchor="middle">May</text>
-                        <text x="620" y="400" font-size="11" fill="#666" text-anchor="middle">Jun</text>
-                        <text x="720" y="400" font-size="11" fill="#666" text-anchor="middle">Jul</text>
-                        <text x="820" y="400" font-size="11" fill="#666" text-anchor="middle">Aug</text>
-
-                        <!-- Sales Line -->
-                        <polyline points="120,300 220,280 320,320 420,250 520,180 620,220 720,150 820,120"
-                                  fill="none"
-                                  stroke="#3b82f6"
-                                  stroke-width="3"
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round" />
-
-                        <!-- Target Line -->
-                        <polyline points="120,280 220,260 320,300 420,280 520,240 620,260 720,220 820,200"
-                                  fill="none"
-                                  stroke="#10b981"
-                                  stroke-width="2"
-                                  stroke-linecap="round"
-                                  stroke-linejoin="round"
-                                  stroke-dasharray="5,3" />
-
-                        <!-- Data Points - Sales -->
-                        <circle cx="120" cy="300" r="4" fill="#3b82f6" />
-                        <circle cx="220" cy="280" r="4" fill="#3b82f6" />
-                        <circle cx="320" cy="320" r="4" fill="#3b82f6" />
-                        <circle cx="420" cy="250" r="4" fill="#3b82f6" />
-                        <circle cx="520" cy="180" r="4" fill="#3b82f6" />
-                        <circle cx="620" cy="220" r="4" fill="#3b82f6" />
-                        <circle cx="720" cy="150" r="4" fill="#3b82f6" />
-                        <circle cx="820" cy="120" r="4" fill="#3b82f6" />
-
-                        <!-- Data Points - Target -->
-                        <circle cx="120" cy="280" r="3" fill="#10b981" />
-                        <circle cx="220" cy="260" r="3" fill="#10b981" />
-                        <circle cx="320" cy="300" r="3" fill="#10b981" />
-                        <circle cx="420" cy="280" r="3" fill="#10b981" />
-                        <circle cx="520" cy="240" r="3" fill="#10b981" />
-                        <circle cx="620" cy="260" r="3" fill="#10b981" />
-                        <circle cx="720" cy="220" r="3" fill="#10b981" />
-                        <circle cx="820" cy="200" r="3" fill="#10b981" />
-                    </svg>
                 </div>
             </div>
         </div>

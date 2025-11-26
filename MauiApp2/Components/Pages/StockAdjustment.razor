@@ -346,10 +346,7 @@
     // Sample data
     private List<Product> products = new List<Product>
     {
-        new Product { Id = "1", Name = "Laptop Dell XPS 13", Brand = "Dell", Category = "Electronics", CurrentStock = 25 },
-        new Product { Id = "2", Name = "Wireless Mouse", Brand = "Logitech", Category = "Accessories", CurrentStock = 100 },
-        new Product { Id = "3", Name = "Mechanical Keyboard", Brand = "Corsair", Category = "Accessories", CurrentStock = 45 },
-        new Product { Id = "4", Name = "27-inch Monitor", Brand = "Samsung", Category = "Electronics", CurrentStock = 15 }
+
     };
 
     private List<AdjustmentRecord> adjustmentHistory = new List<AdjustmentRecord>();
@@ -370,45 +367,15 @@
         {
             new AdjustmentRecord
             {
-                ProductId = "1",
-                ProductName = "Laptop Dell XPS 13",
-                Brand = "Dell",
-                Category = "Electronics",
-                AdjustmentDate = DateTime.Now.AddDays(-2),
-                AdjustmentType = "Increase",
-                PreviousQuantity = 20,
-                NewQuantity = 25,
-                Reason = "Physical Count",
-                ProcessedBy = "John Doe",
-                Remarks = "Found additional units during inventory"
+               
             },
             new AdjustmentRecord
             {
-                ProductId = "2",
-                ProductName = "Wireless Mouse",
-                Brand = "Logitech",
-                Category = "Accessories",
-                AdjustmentDate = DateTime.Now.AddDays(-1),
-                AdjustmentType = "Decrease",
-                PreviousQuantity = 105,
-                NewQuantity = 100,
-                Reason = "Damaged Goods",
-                ProcessedBy = "Jane Smith",
-                Remarks = "Removed defective units"
+                
             },
             new AdjustmentRecord
             {
-                ProductId = "3",
-                ProductName = "Mechanical Keyboard",
-                Brand = "Corsair",
-                Category = "Accessories",
-                AdjustmentDate = DateTime.Now.AddDays(-3),
-                AdjustmentType = "Correction",
-                PreviousQuantity = 40,
-                NewQuantity = 45,
-                Reason = "System Error",
-                ProcessedBy = "Mike Johnson",
-                Remarks = "Corrected system counting error"
+               
             }
         };
     }

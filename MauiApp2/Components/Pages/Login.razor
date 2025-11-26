@@ -69,7 +69,10 @@
                                 <circle cx="12" cy="7" r="4"></circle>
                             </svg>
                         </div>
-                        <input @bind="username" @bind:event="oninput" class="form-control" placeholder="Enter your username or email" />
+                        <input @bind="username" @bind:event="oninput"
+                               @onkeypress="HandleKeyPress"
+                               class="form-control"
+                               placeholder="Enter your username or email" />
                     </div>
                     @if (showUsernameError)
                     {
@@ -86,7 +89,12 @@
                                 <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
                             </svg>
                         </div>
-                        <input @bind="password" @bind:event="oninput" type="password" class="form-control" placeholder="Enter your password" />
+                        <input @bind="password"
+                               @bind:event="oninput"
+                               @onkeypress="HandleKeyPress"
+                               type="password"
+                               class="form-control"
+                               placeholder="Enter your password" />
                     </div>
                     @if (showPasswordError)
                     {
@@ -141,17 +149,23 @@
         loginErrorMessage = string.Empty;
     }
 
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !isLoading)
+        {
+            await HandleLogin();
+        }
+    }
+
     private async Task HandleLogin()
     {
         ClearErrors();
         isLoading = true;
+        StateHasChanged();
 
         try
         {
-            await Task.Delay(300);
-
-            Console.WriteLine($"Login attempt - Username: {username}, Password: {password}");
-
+            // Validate input
             bool hasError = false;
 
             if (string.IsNullOrWhiteSpace(username))
@@ -168,23 +182,30 @@
 
             if (hasError)
             {
+                isLoading = false;
+                StateHasChanged();
                 return;
             }
 
-            var result = await AuthService.LoginAsync(username, password);
+            // Attempt login with database
+            var result = await AuthService.LoginAsync(username.Trim(), password);
 
             if (result)
             {
-                Console.WriteLine("Login successful");
+                Console.WriteLine($"Login successful for user: {username}");
                 Navigation.NavigateTo("/dashboard");
             }
             else
             {
-                loginErrorMessage = "Invalid username or password. Please try again.";
+                loginErrorMessage = "Invalid username/email or password. Please check your credentials and try again.";
+                isLoading = false;
+                StateHasChanged();
             }
         }
-        finally
+        catch (Exception ex)
         {
+            Console.WriteLine($"Login error: {ex.Message}");
+            loginErrorMessage = "An error occurred during login. Please try again.";
             isLoading = false;
             StateHasChanged();
         }

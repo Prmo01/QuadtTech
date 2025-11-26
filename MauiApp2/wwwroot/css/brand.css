@@ -1,4 +1,4 @@
-/* Brand Management Styles */
+/* Brand Management Styles - Matching Category Layout */
 .brand-management {
     background-color: white;
     border-radius: 16px;
@@ -47,8 +47,8 @@
 }
 
     .tab.active {
-        color: #8b5cf6;
-        border-bottom-color: #8b5cf6;
+        color: #2563eb;
+        border-bottom-color: #2563eb;
     }
 
 .brand-table-container {
@@ -92,6 +92,47 @@
     color: inherit;
 }
 
+/* Loading Indicator */
+.loading-indicator {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px;
+    gap: 12px;
+    color: #6b7280;
+    font-size: 14px;
+}
+
+.spinner {
+    border: 2px solid #f3f4f6;
+    border-top: 2px solid #2563eb;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.button-spinner {
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    width: 16px;
+    height: 16px;
+    animation: spin 1s linear infinite;
+    display: inline-block;
+    margin-right: 8px;
+}
+
 /* Toolbar Styles */
 .brand-toolbar {
     display: flex;
@@ -103,7 +144,7 @@
 }
 
 .add-brand-btn {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: #2563eb;
     color: white;
     border: none;
     padding: 12px 24px 12px 20px;
@@ -115,14 +156,20 @@
     align-items: center;
     gap: 8px;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     letter-spacing: 0.3px;
 }
 
-    .add-brand-btn:hover {
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+    .add-brand-btn:hover:not(:disabled) {
+        background: #1d4ed8;
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+    }
+
+    .add-brand-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+        transform: none;
     }
 
     .add-brand-btn::before {
@@ -150,13 +197,18 @@
 }
 
     .brand-search-input:focus {
-        border-color: #8b5cf6;
+        border-color: #2563eb;
         background-color: white;
-        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
     .brand-search-input::placeholder {
         color: #9ca3af;
+    }
+
+    .brand-search-input:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
     }
 
 .brand-search-icon {
@@ -219,56 +271,50 @@
         .brand-table td:first-child {
             color: #6b7280;
             font-weight: 600;
-            
         }
 
         .brand-table td:nth-child(2) {
             font-weight: 600;
-            color: #7c3aed;
+            color: #2563eb;
         }
 
-/* Status Badge */
-.status-badge {
-    padding: 6px 12px;
-    border-radius: 20px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
+.brand-description {
+    max-width: 300px;
 }
 
-    .status-badge.active {
-        background-color: #d1fae5;
-        color: #065f46;
-    }
+.description-text {
+    color: #6b7280;
+    line-height: 1.4;
+}
 
-    .status-badge.inactive {
-        background-color: #fee2e2;
-        color: #991b1b;
-    }
+.no-description {
+    color: #9ca3af;
+    font-style: italic;
+}
 
 .brand-edit-btn {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
-    border: none;
-    padding: 9px 24px;
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 600;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-    letter-spacing: 0.3px;
 }
 
-    .brand-edit-btn:hover {
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+    .brand-edit-btn:hover:not(:disabled) {
+        background: #2563eb;
+        color: white;
+        border-color: #2563eb;
+        transform: translateY(-1px);
     }
 
-    .brand-edit-btn:active {
-        transform: translateY(0);
+    .brand-edit-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+        transform: none;
     }
 
 /* Brand Modal Styles */
@@ -405,9 +451,9 @@
 }
 
     .brand-form-control:focus {
-        border-color: #8b5cf6;
+        border-color: #2563eb;
         background-color: white;
-        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
     .brand-form-control.input-error {
@@ -415,10 +461,28 @@
         background-color: #fef2f2;
     }
 
+    .brand-form-control:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
 .brand-field-error {
     color: #ef4444;
     font-size: 12px;
     font-weight: 500;
+}
+
+.brand-textarea {
+    resize: vertical;
+    min-height: 100px;
+    font-family: inherit;
+}
+
+.character-count {
+    text-align: right;
+    color: #6b7280;
+    font-size: 12px;
+    margin-top: 4px;
 }
 
 .brand-modal-footer {
@@ -441,13 +505,18 @@
     transition: all 0.3s ease;
 }
 
-    .brand-btn-cancel:hover {
+    .brand-btn-cancel:hover:not(:disabled) {
         background: #e5e7eb;
         border-color: #9ca3af;
     }
 
+    .brand-btn-cancel:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+
 .brand-btn-submit {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: #2563eb;
     color: white;
     border: none;
     padding: 12px 24px;
@@ -456,13 +525,13 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
     .brand-btn-submit:hover:not(:disabled) {
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        background: #1d4ed8;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
     }
 
     .brand-btn-submit:disabled {

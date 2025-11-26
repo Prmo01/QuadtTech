@@ -1,7 +1,11 @@
 ﻿@page "/products"
 @layout MainLayout
 @using MauiApp2.Services
+@using MauiApp2.Models
 @inject IAuthService AuthService
+@inject IProductService ProductService
+@inject ICategoryService CategoryService
+@inject IBrandService BrandService
 @inject NavigationManager Navigation
 
 <div class="dashboard-wrapper">
@@ -61,7 +65,7 @@
                             <th>Category</th>
                             <th>Brand</th>
                             <th>SKU</th>
-                            <th>Model Number</th>
+                            <th>Model Name</th>
                             <th>Cost Price</th>
                             <th>Sell Price</th>
                             <th>Status</th>
@@ -147,7 +151,7 @@
                                class="form-control @(HasError("ProductName") ? "input-error" : "")"
                                @bind="newProductName"
                                placeholder="Enter product name"
-                               maxlength="100" />
+                               maxlength="255" />
                         @if (HasError("ProductName"))
                         {
                             <span class="field-error">@GetError("ProductName")</span>
@@ -158,11 +162,11 @@
                         <div class="form-group">
                             <label>Category *</label>
                             <select class="form-control @(HasError("Category") ? "input-error" : "")"
-                                    @bind="newCategory">
-                                <option value="">Select Category</option>
+                                    @bind="selectedCategoryId">
+                                <option value="0">Select Category</option>
                                 @foreach (var category in availableCategories)
                                 {
-                                    <option value="@category">@category</option>
+                                    <option value="@category.category_id">@category.category_name</option>
                                 }
                             </select>
                             @if (HasError("Category"))
@@ -174,11 +178,11 @@
                         <div class="form-group">
                             <label>Brand *</label>
                             <select class="form-control @(HasError("Brand") ? "input-error" : "")"
-                                    @bind="newBrand">
-                                <option value="">Select Brand</option>
+                                    @bind="selectedBrandId">
+                                <option value="0">Select Brand</option>
                                 @foreach (var brand in availableBrands)
                                 {
-                                    <option value="@brand">@brand</option>
+                                    <option value="@brand.brand_id">@brand.brand_name</option>
                                 }
                             </select>
                             @if (HasError("Brand"))
@@ -190,25 +194,22 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>SKU *</label>
+                            <label>SKU</label>
                             <input type="text"
-                                   class="form-control @(HasError("SKU") ? "input-error" : "")"
-                                   @bind="newSKU"
-                                   placeholder="Enter SKU"
-                                   maxlength="50" />
-                            @if (HasError("SKU"))
-                            {
-                                <span class="field-error">@GetError("SKU")</span>
-                            }
+                                   class="form-control"
+                                   value="Brand-Category-XXXX"
+                                   disabled
+                                   placeholder="Auto-generated from Brand-Category-XXXX" />
+                            <small class="form-help">SKU will be automatically generated</small>
                         </div>
 
                         <div class="form-group">
-                            <label>Model Number *</label>
+                            <label>Model Name</label>
                             <input type="text"
                                    class="form-control @(HasError("ModelNumber") ? "input-error" : "")"
                                    @bind="newModelNumber"
-                                   placeholder="Enter model number"
-                                   maxlength="50" />
+                                   placeholder="Enter model name"
+                                   maxlength="100" />
                             @if (HasError("ModelNumber"))
                             {
                                 <span class="field-error">@GetError("ModelNumber")</span>
@@ -218,7 +219,7 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Cost Price (₱) *</label>
+                            <label>Cost Price (₱)</label>
                             <input type="number"
                                    class="form-control @(HasError("CostPrice") ? "input-error" : "")"
                                    @bind="newCostPrice"
@@ -248,14 +249,11 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Status *</label>
+                            <label>Status</label>
                             <select class="form-control @(HasError("Status") ? "input-error" : "")"
                                     @bind="newStatus">
-                                <option value="">Select Status</option>
-                                @foreach (var status in availableStatuses)
-                                {
-                                    <option value="@status">@status</option>
-                                }
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
                             </select>
                             @if (HasError("Status"))
                             {
@@ -314,7 +312,7 @@
                                class="form-control @(HasEditError("ProductName") ? "input-error" : "")"
                                @bind="editProductName"
                                placeholder="Enter product name"
-                               maxlength="100" />
+                               maxlength="255" />
                         @if (HasEditError("ProductName"))
                         {
                             <span class="field-error">@GetEditError("ProductName")</span>
@@ -325,11 +323,11 @@
                         <div class="form-group">
                             <label>Category *</label>
                             <select class="form-control @(HasEditError("Category") ? "input-error" : "")"
-                                    @bind="editCategory">
-                                <option value="">Select Category</option>
+                                    @bind="editCategoryId">
+                                <option value="0">Select Category</option>
                                 @foreach (var category in availableCategories)
                                 {
-                                    <option value="@category">@category</option>
+                                    <option value="@category.category_id">@category.category_name</option>
                                 }
                             </select>
                             @if (HasEditError("Category"))
@@ -341,11 +339,11 @@
                         <div class="form-group">
                             <label>Brand *</label>
                             <select class="form-control @(HasEditError("Brand") ? "input-error" : "")"
-                                    @bind="editBrand">
-                                <option value="">Select Brand</option>
+                                    @bind="editBrandId">
+                                <option value="0">Select Brand</option>
                                 @foreach (var brand in availableBrands)
                                 {
-                                    <option value="@brand">@brand</option>
+                                    <option value="@brand.brand_id">@brand.brand_name</option>
                                 }
                             </select>
                             @if (HasEditError("Brand"))
@@ -357,25 +355,21 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>SKU *</label>
+                            <label>SKU</label>
                             <input type="text"
-                                   class="form-control @(HasEditError("SKU") ? "input-error" : "")"
-                                   @bind="editSKU"
-                                   placeholder="Enter SKU"
-                                   maxlength="50" />
-                            @if (HasEditError("SKU"))
-                            {
-                                <span class="field-error">@GetEditError("SKU")</span>
-                            }
+                                   class="form-control"
+                                   value="@editSKU"
+                                   readonly />
+                            <small class="form-help">SKU cannot be changed</small>
                         </div>
 
                         <div class="form-group">
-                            <label>Model Number *</label>
+                            <label>Model Number</label>
                             <input type="text"
                                    class="form-control @(HasEditError("ModelNumber") ? "input-error" : "")"
                                    @bind="editModelNumber"
                                    placeholder="Enter model number"
-                                   maxlength="50" />
+                                   maxlength="100" />
                             @if (HasEditError("ModelNumber"))
                             {
                                 <span class="field-error">@GetEditError("ModelNumber")</span>
@@ -385,7 +379,7 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Cost Price (₱) *</label>
+                            <label>Cost Price (₱)</label>
                             <input type="number"
                                    class="form-control @(HasEditError("CostPrice") ? "input-error" : "")"
                                    @bind="editCostPrice"
@@ -415,14 +409,11 @@
 
                     <div class="form-row">
                         <div class="form-group">
-                            <label>Status *</label>
+                            <label>Status</label>
                             <select class="form-control @(HasEditError("Status") ? "input-error" : "")"
                                     @bind="editStatus">
-                                <option value="">Select Status</option>
-                                @foreach (var status in availableStatuses)
-                                {
-                                    <option value="@status">@status</option>
-                                }
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
                             </select>
                             @if (HasEditError("Status"))
                             {
@@ -452,63 +443,32 @@
 @code {
     private bool isInventoryMenuOpen = true;
     private string searchQuery = "";
-    private List<Product> products = new();
+    private List<ProductDisplay> products = new();
+    private List<MauiApp2.Models.Category> availableCategories = new();
+    private List<MauiApp2.Models.Brand> availableBrands = new();
     private bool showAddModal = false;
     private bool showEditModal = false;
-    private Product? editingProduct = null;
-
-    // Available options for dropdowns
-    private List<string> availableCategories = new List<string>
-    {
-        "Refrigerator",
-        "Television", 
-        "Air Conditioner",
-        "Washing Machine",
-        "Kitchen Appliance",
-        "Small Appliance",
-        "Audio Equipment",
-        "Other"
-    };
-
-    private List<string> availableBrands = new List<string>
-    {
-        "LG",
-        "Samsung",
-        "Panasonic",
-        "Sharp",
-        "Toshiba",
-        "Sony",
-        "Whirlpool",
-        "Other"
-    };
-
-    private List<string> availableStatuses = new List<string>
-    {
-        "Active",
-        "Inactive", 
-        "Discontinued"
-    };
+    private ProductDisplay? editingProduct = null;
+    private bool isLoading = false;
 
     // Add form fields
     private string newProductName = "";
-    private string newCategory = "";
-    private string newBrand = "";
-    private string newSKU = "";
+    private int selectedCategoryId = 0;
+    private int selectedBrandId = 0;
     private string newModelNumber = "";
-    private decimal newCostPrice = 0;
+    private decimal? newCostPrice = null;
     private decimal newSellPrice = 0;
-    private string newStatus = "";
-    private int newQuantity = 0;
+    private bool newStatus = true;
 
     // Edit form fields
     private string editProductName = "";
-    private string editCategory = "";
-    private string editBrand = "";
+    private int editCategoryId = 0;
+    private int editBrandId = 0;
     private string editSKU = "";
     private string editModelNumber = "";
-    private decimal editCostPrice = 0;
+    private decimal? editCostPrice = null;
     private decimal editSellPrice = 0;
-    private string editStatus = "";
+    private bool editStatus = true;
 
     // Messages and validation
     private string errorMessage = "";
@@ -516,9 +476,10 @@
     private List<string> validationErrors = new List<string>();
     private List<string> editValidationErrors = new List<string>();
 
-    public class Product
+    // Display model for UI
+    public class ProductDisplay
     {
-        public string ProductId { get; set; } = "";
+        public int ProductId { get; set; }
         public string ProductName { get; set; } = "";
         public string Category { get; set; } = "";
         public string Brand { get; set; } = "";
@@ -528,25 +489,131 @@
         public decimal SellPrice { get; set; }
         public string Status { get; set; } = "Active";
         public int Quantity { get; set; }
+        public int? BrandId { get; set; }
+        public int? CategoryId { get; set; }
     }
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadProducts();
+        try
+        {
+            await LoadDataAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Initialization error: {ex.Message}";
+            Console.WriteLine($"OnInitializedAsync error: {ex}");
+            StateHasChanged();
+        }
     }
 
-    private void ToggleInventoryMenu()
+    private async Task LoadDataAsync()
     {
-        isInventoryMenuOpen = !isInventoryMenuOpen;
+        isLoading = true;
+        try
+        {
+            await LoadCategories();
+            await LoadBrands();
+            await LoadProducts();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+            Console.WriteLine($"Error in LoadDataAsync: {ex}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
     }
 
-    private void LoadProducts()
+    private async Task LoadProducts()
     {
-        // Start with empty list - no hardcoded data
-        products = new List<Product>();
+        try
+        {
+            if (ProductService == null)
+            {
+                errorMessage = "ProductService is not available. Please check service registration.";
+                Console.WriteLine("ProductService is null");
+                return;
+            }
+
+            var dbProducts = await ProductService.GetProductsAsync();
+            if (dbProducts == null)
+            {
+                dbProducts = new List<MauiApp2.Models.Product>();
+            }
+
+            products = dbProducts.Select(p => new ProductDisplay
+            {
+                ProductId = p.product_id,
+                ProductName = p.product_name,
+                Category = availableCategories?.FirstOrDefault(c => c.category_id == p.category_id)?.category_name ?? "N/A",
+                Brand = availableBrands?.FirstOrDefault(b => b.brand_id == p.brand_id)?.brand_name ?? "N/A",
+                SKU = p.product_sku,
+                ModelNumber = p.model_number ?? "",
+                CostPrice = p.cost_price ?? 0,
+                SellPrice = p.sell_price,
+                Status = p.status == true ? "Active" : "Inactive",
+                Quantity = p.quantity ?? 0,
+                BrandId = p.brand_id,
+                CategoryId = p.category_id
+            }).ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading products: {ex.Message}";
+            Console.WriteLine($"Error in LoadProducts: {ex}");
+            products = new List<ProductDisplay>();
+        }
     }
 
-    private IEnumerable<Product> FilteredProducts
+    private async Task LoadCategories()
+    {
+        try
+        {
+            availableCategories = await CategoryService.GetCategoriesAsync();
+            if (availableCategories == null)
+            {
+                availableCategories = new List<MauiApp2.Models.Category>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading categories: {ex.Message}";
+            Console.WriteLine($"LoadCategories error: {ex}");
+            availableCategories = new List<MauiApp2.Models.Category>();
+        }
+    }
+
+    private async Task LoadBrands()
+    {
+        try
+        {
+            if (BrandService == null)
+            {
+                errorMessage = "BrandService is not available. Please check service registration.";
+                Console.WriteLine("BrandService is null");
+                availableBrands = new List<MauiApp2.Models.Brand>();
+                return;
+            }
+
+            availableBrands = await BrandService.GetBrandsAsync();
+            if (availableBrands == null)
+            {
+                availableBrands = new List<MauiApp2.Models.Brand>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading brands: {ex.Message}";
+            Console.WriteLine($"LoadBrands error: {ex}");
+            availableBrands = new List<MauiApp2.Models.Brand>();
+        }
+    }
+
+    private IEnumerable<ProductDisplay> FilteredProducts
     {
         get
         {
@@ -578,7 +645,7 @@
         StateHasChanged();
     }
 
-    private void ShowEditModal(Product product)
+    private void ShowEditModal(ProductDisplay product)
     {
         editingProduct = product;
         showEditModal = true;
@@ -586,13 +653,13 @@
 
         // Populate edit form
         editProductName = product.ProductName;
-        editCategory = product.Category;
-        editBrand = product.Brand;
+        editCategoryId = product.CategoryId ?? 0;
+        editBrandId = product.BrandId ?? 0;
         editSKU = product.SKU;
         editModelNumber = product.ModelNumber;
         editCostPrice = product.CostPrice;
         editSellPrice = product.SellPrice;
-        editStatus = product.Status;
+        editStatus = product.Status == "Active";
 
         StateHasChanged();
     }
@@ -609,27 +676,25 @@
     private void ResetAddForm()
     {
         newProductName = "";
-        newCategory = "";
-        newBrand = "";
-        newSKU = "";
+        selectedCategoryId = 0;
+        selectedBrandId = 0;
         newModelNumber = "";
-        newCostPrice = 0;
+        newCostPrice = null;
         newSellPrice = 0;
-        newStatus = "";
-        newQuantity = 0;
+        newStatus = true;
         validationErrors.Clear();
     }
 
     private void ResetEditForm()
     {
         editProductName = "";
-        editCategory = "";
-        editBrand = "";
+        editCategoryId = 0;
+        editBrandId = 0;
         editSKU = "";
         editModelNumber = "";
-        editCostPrice = 0;
+        editCostPrice = null;
         editSellPrice = 0;
-        editStatus = "";
+        editStatus = true;
         editValidationErrors.Clear();
     }
 
@@ -654,35 +719,24 @@
         else if (newProductName.Length < 2)
             AddValidationError("ProductName", "Product name must be at least 2 characters long");
 
-        if (string.IsNullOrWhiteSpace(newCategory))
+        if (selectedCategoryId == 0)
             AddValidationError("Category", "Category is required");
 
-        if (string.IsNullOrWhiteSpace(newBrand))
+        if (selectedBrandId == 0)
             AddValidationError("Brand", "Brand is required");
-
-        if (string.IsNullOrWhiteSpace(newSKU))
-            AddValidationError("SKU", "SKU is required");
-        else if (products.Any(p => p.SKU.Equals(newSKU, StringComparison.OrdinalIgnoreCase)))
-            AddValidationError("SKU", "SKU already exists");
-
-        if (string.IsNullOrWhiteSpace(newModelNumber))
-            AddValidationError("ModelNumber", "Model number is required");
-
-        if (newCostPrice <= 0)
-            AddValidationError("CostPrice", "Cost price must be greater than 0");
-        else if (newCostPrice > 1000000)
-            AddValidationError("CostPrice", "Cost price cannot exceed ₱1,000,000");
 
         if (newSellPrice <= 0)
             AddValidationError("SellPrice", "Sell price must be greater than 0");
         else if (newSellPrice > 1000000)
             AddValidationError("SellPrice", "Sell price cannot exceed ₱1,000,000");
 
-        if (newSellPrice < newCostPrice)
-            AddValidationError("SellPrice", "Sell price cannot be less than cost price");
-
-        if (string.IsNullOrWhiteSpace(newStatus))
-            AddValidationError("Status", "Status is required");
+        if (newCostPrice.HasValue && newCostPrice > 0)
+        {
+            if (newCostPrice > 1000000)
+                AddValidationError("CostPrice", "Cost price cannot exceed ₱1,000,000");
+            if (newSellPrice < newCostPrice.Value)
+                AddValidationError("SellPrice", "Sell price cannot be less than cost price");
+        }
     }
 
     private void ValidateEditForm()
@@ -694,35 +748,24 @@
         else if (editProductName.Length < 2)
             AddEditValidationError("ProductName", "Product name must be at least 2 characters long");
 
-        if (string.IsNullOrWhiteSpace(editCategory))
+        if (editCategoryId == 0)
             AddEditValidationError("Category", "Category is required");
 
-        if (string.IsNullOrWhiteSpace(editBrand))
+        if (editBrandId == 0)
             AddEditValidationError("Brand", "Brand is required");
-
-        if (string.IsNullOrWhiteSpace(editSKU))
-            AddEditValidationError("SKU", "SKU is required");
-        else if (products.Any(p => p.SKU.Equals(editSKU, StringComparison.OrdinalIgnoreCase) && p.ProductId != editingProduct?.ProductId))
-            AddEditValidationError("SKU", "SKU already exists");
-
-        if (string.IsNullOrWhiteSpace(editModelNumber))
-            AddEditValidationError("ModelNumber", "Model number is required");
-
-        if (editCostPrice <= 0)
-            AddEditValidationError("CostPrice", "Cost price must be greater than 0");
-        else if (editCostPrice > 1000000)
-            AddEditValidationError("CostPrice", "Cost price cannot exceed ₱1,000,000");
 
         if (editSellPrice <= 0)
             AddEditValidationError("SellPrice", "Sell price must be greater than 0");
         else if (editSellPrice > 1000000)
             AddEditValidationError("SellPrice", "Sell price cannot exceed ₱1,000,000");
 
-        if (editSellPrice < editCostPrice)
-            AddEditValidationError("SellPrice", "Sell price cannot be less than cost price");
-
-        if (string.IsNullOrWhiteSpace(editStatus))
-            AddEditValidationError("Status", "Status is required");
+        if (editCostPrice.HasValue && editCostPrice > 0)
+        {
+            if (editCostPrice > 1000000)
+                AddEditValidationError("CostPrice", "Cost price cannot exceed ₱1,000,000");
+            if (editSellPrice < editCostPrice.Value)
+                AddEditValidationError("SellPrice", "Sell price cannot be less than cost price");
+        }
     }
 
     private void AddValidationError(string field, string message)
@@ -762,14 +805,9 @@
             ValidateAddForm();
             return validationErrors.Count == 0 &&
                    !string.IsNullOrWhiteSpace(newProductName) &&
-                   !string.IsNullOrWhiteSpace(newCategory) &&
-                   !string.IsNullOrWhiteSpace(newBrand) &&
-                   !string.IsNullOrWhiteSpace(newSKU) &&
-                   !string.IsNullOrWhiteSpace(newModelNumber) &&
-                   !string.IsNullOrWhiteSpace(newStatus) &&
-                   newCostPrice > 0 &&
-                   newSellPrice > 0 &&
-                   newSellPrice >= newCostPrice;
+                   selectedCategoryId > 0 &&
+                   selectedBrandId > 0 &&
+                   newSellPrice > 0;
         }
     }
 
@@ -780,19 +818,14 @@
             ValidateEditForm();
             return editValidationErrors.Count == 0 &&
                    !string.IsNullOrWhiteSpace(editProductName) &&
-                   !string.IsNullOrWhiteSpace(editCategory) &&
-                   !string.IsNullOrWhiteSpace(editBrand) &&
-                   !string.IsNullOrWhiteSpace(editSKU) &&
-                   !string.IsNullOrWhiteSpace(editModelNumber) &&
-                   !string.IsNullOrWhiteSpace(editStatus) &&
-                   editCostPrice > 0 &&
-                   editSellPrice > 0 &&
-                   editSellPrice >= editCostPrice;
+                   editCategoryId > 0 &&
+                   editBrandId > 0 &&
+                   editSellPrice > 0;
         }
     }
 
     // CRUD Operations
-    private void AddProduct()
+    private async Task AddProduct()
     {
         ValidateAddForm();
 
@@ -804,35 +837,36 @@
 
         try
         {
-            var newProductId = products.Any() ? (products.Max(p => int.Parse(p.ProductId)) + 1).ToString() : "1";
-
-            var newProduct = new Product
+            var newProduct = new MauiApp2.Models.Product
             {
-                ProductId = newProductId,
-                ProductName = newProductName.Trim(),
-                Category = newCategory,
-                Brand = newBrand,
-                SKU = newSKU.Trim(),
-                ModelNumber = newModelNumber.Trim(),
-                CostPrice = newCostPrice,
-                SellPrice = newSellPrice,
-                Status = newStatus,
-                Quantity = 0 // Initial quantity is always 0
+                product_name = newProductName.Trim(),
+                category_id = selectedCategoryId > 0 ? selectedCategoryId : null,
+                brand_id = selectedBrandId > 0 ? selectedBrandId : null,
+                product_sku = "", // Will be auto-generated
+                model_number = string.IsNullOrWhiteSpace(newModelNumber) ? null : newModelNumber.Trim(),
+                cost_price = newCostPrice,
+                sell_price = newSellPrice,
+                quantity = 0,
+                status = newStatus,
+                created_date = DateTime.Now,
+                modified_date = DateTime.Now
             };
 
-            products.Add(newProduct);
-            successMessage = $"Product '{newProductName}' added successfully!";
+            var productId = await ProductService.CreateProductAsync(newProduct);
+            successMessage = $"Product '{newProductName}' added successfully with SKU: {newProduct.product_sku}!";
 
+            await LoadProducts();
             CloseAddModal();
             StateHasChanged();
         }
         catch (Exception ex)
         {
             errorMessage = $"Error adding product: {ex.Message}";
+            StateHasChanged();
         }
     }
 
-    private void UpdateProduct()
+    private async Task UpdateProduct()
     {
         ValidateEditForm();
 
@@ -844,27 +878,38 @@
 
         try
         {
-            var productToUpdate = products.FirstOrDefault(p => p.ProductId == editingProduct.ProductId);
-            if (productToUpdate != null)
+            var productToUpdate = new MauiApp2.Models.Product
             {
-                productToUpdate.ProductName = editProductName.Trim();
-                productToUpdate.Category = editCategory;
-                productToUpdate.Brand = editBrand;
-                productToUpdate.SKU = editSKU.Trim();
-                productToUpdate.ModelNumber = editModelNumber.Trim();
-                productToUpdate.CostPrice = editCostPrice;
-                productToUpdate.SellPrice = editSellPrice;
-                productToUpdate.Status = editStatus;
+                product_id = editingProduct.ProductId,
+                product_name = editProductName.Trim(),
+                category_id = editCategoryId > 0 ? editCategoryId : null,
+                brand_id = editBrandId > 0 ? editBrandId : null,
+                product_sku = editSKU, // Keep existing SKU
+                model_number = string.IsNullOrWhiteSpace(editModelNumber) ? null : editModelNumber.Trim(),
+                cost_price = editCostPrice,
+                sell_price = editSellPrice,
+                quantity = editingProduct.Quantity,
+                status = editStatus,
+                modified_date = DateTime.Now
+            };
 
+            var success = await ProductService.UpdateProductAsync(productToUpdate);
+            if (success)
+            {
                 successMessage = $"Product '{editProductName}' updated successfully!";
+                await LoadProducts();
+                CloseEditModal();
             }
-
-            CloseEditModal();
+            else
+            {
+                errorMessage = "Failed to update product.";
+            }
             StateHasChanged();
         }
         catch (Exception ex)
         {
             errorMessage = $"Error updating product: {ex.Message}";
+            StateHasChanged();
         }
     }
 

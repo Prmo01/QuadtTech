@@ -183,7 +183,7 @@
                         </div>
                         <div class="form-group">
                             <label>Date Ordered *</label>
-                            <input type="date" class="form-control @(HasError("DateOrdered") ? "input-error" : "")" 
+                            <input type="date" class="form-control @(HasError("DateOrdered") ? "input-error" : "")"
                                    @bind="dateOrdered" max="@DateTime.Now.ToString("yyyy-MM-dd")" />
                             @if (HasError("DateOrdered"))
                             {
@@ -195,7 +195,7 @@
                     <div class="form-row">
                         <div class="form-group">
                             <label>Expected Date *</label>
-                            <input type="date" class="form-control @(HasError("ExpectedDate") ? "input-error" : "")" 
+                            <input type="date" class="form-control @(HasError("ExpectedDate") ? "input-error" : "")"
                                    @bind="expectedDate" min="@DateTime.Now.ToString("yyyy-MM-dd")" />
                             @if (HasError("ExpectedDate"))
                             {

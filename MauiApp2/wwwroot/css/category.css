@@ -1,4 +1,4 @@
-﻿/* Category Management Styles - Matching Brand Design */
+﻿/* Category Management Styles - Matching Products Page Design */
 .brand-management {
     background-color: white;
     border-radius: 16px;
@@ -47,8 +47,8 @@
 }
 
     .tab.active {
-        color: #8b5cf6;
-        border-bottom-color: #8b5cf6;
+        color: #2563eb;
+        border-bottom-color: #2563eb;
     }
 
 .brand-table-container {
@@ -105,7 +105,7 @@
 
 .spinner {
     border: 2px solid #f3f4f6;
-    border-top: 2px solid #8b5cf6;
+    border-top: 2px solid #2563eb;
     border-radius: 50%;
     width: 20px;
     height: 20px;
@@ -144,7 +144,7 @@
 }
 
 .add-brand-btn {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: #2563eb;
     color: white;
     border: none;
     padding: 12px 24px 12px 20px;
@@ -156,14 +156,14 @@
     align-items: center;
     gap: 8px;
     transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(139, 92, 246, 0.25);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
     letter-spacing: 0.3px;
 }
 
     .add-brand-btn:hover:not(:disabled) {
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        background: #1d4ed8;
         transform: translateY(-2px);
-        box-shadow: 0 6px 16px rgba(139, 92, 246, 0.35);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
     }
 
     .add-brand-btn:disabled {
@@ -197,9 +197,9 @@
 }
 
     .brand-search-input:focus {
-        border-color: #8b5cf6;
+        border-color: #2563eb;
         background-color: white;
-        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
     .brand-search-input::placeholder {
@@ -275,7 +275,7 @@
 
         .brand-table td:nth-child(2) {
             font-weight: 600;
-            color: #7c3aed;
+            color: #2563eb;
         }
 
 .brand-description {
@@ -293,24 +293,22 @@
 }
 
 .brand-edit-btn {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    color: white;
-    border: none;
-    padding: 9px 24px;
-    border-radius: 7px;
-    font-size: 13px;
-    font-weight: 600;
+    background: #f3f4f6;
+    color: #374151;
+    border: 1px solid #d1d5db;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 500;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
-    letter-spacing: 0.3px;
-    margin-right: 8px;
 }
 
     .brand-edit-btn:hover:not(:disabled) {
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        background: #2563eb;
+        color: white;
+        border-color: #2563eb;
+        transform: translateY(-1px);
     }
 
     .brand-edit-btn:disabled {
@@ -479,9 +477,9 @@
 }
 
     .brand-form-control:focus {
-        border-color: #8b5cf6;
+        border-color: #2563eb;
         background-color: white;
-        box-shadow: 0 0 0 4px rgba(139, 92, 246, 0.1);
+        box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
     .brand-form-control.input-error {
@@ -544,7 +542,7 @@
     }
 
 .brand-btn-submit {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
+    background: #2563eb;
     color: white;
     border: none;
     padding: 12px 24px;
@@ -553,13 +551,13 @@
     font-weight: 600;
     cursor: pointer;
     transition: all 0.3s ease;
-    box-shadow: 0 2px 8px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
     .brand-btn-submit:hover:not(:disabled) {
-        background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
+        background: #1d4ed8;
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(139, 92, 246, 0.4);
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
     }
 
     .brand-btn-submit:disabled {

@@ -1,4 +1,10 @@
-﻿using MauiApp2.Models;
+﻿using System;
+using System.Threading.Tasks;
+using Microsoft.Data.SqlClient;
+using MauiApp2.Models;
+using MauiApp2.Components.Database;
+using System.Security.Cryptography;
+using System.Text;
 
 namespace MauiApp2.Services
 {
@@ -8,38 +14,120 @@ namespace MauiApp2.Services
         Task LogoutAsync();
         bool IsAuthenticated { get; }
         string CurrentUser { get; }
+        int CurrentUserId { get; }
+        string CurrentUserName { get; }
+        int CurrentUserRoleId { get; }
+        string CurrentUserRoleName { get; }
     }
 
     public class AuthService : IAuthService
     {
         public bool IsAuthenticated { get; private set; }
         public string CurrentUser { get; private set; } = string.Empty;
+        public int CurrentUserId { get; private set; }
+        public string CurrentUserName { get; private set; } = string.Empty;
+        public int CurrentUserRoleId { get; private set; }
+        public string CurrentUserRoleName { get; private set; } = string.Empty;
 
-        public Task<bool> LoginAsync(string username, string password)
+        public async Task<bool> LoginAsync(string username, string password)
         {
-            // Demo credentials
-            var demoUsername = "demo@quadtech.com";
-            var demoPassword = "QuadTech123!";
-
-            // Check against demo credentials
-            bool isDemoUser = (username.Trim().ToLower() == demoUsername.ToLower() &&
-                              password == demoPassword);
-
-            if (isDemoUser)
+            try
             {
-                IsAuthenticated = true;
-                CurrentUser = username;
-                return Task.FromResult(true);
-            }
+                if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(password))
+                {
+                    return false;
+                }
 
-            return Task.FromResult(false);
+                using var connection = db.GetConnection();
+                await connection.OpenAsync();
+
+                // Try to find user by username or email with role name
+                var command = new SqlCommand(@"
+                    SELECT u.user_id, u.username, u.email, u.password_hash, u.full_name, u.is_active, u.role_id,
+                           r.role_name
+                    FROM tbl_users u
+                    LEFT JOIN tbl_roles r ON u.role_id = r.role_id
+                    WHERE (u.username = @username OR u.email = @username) 
+                    AND u.is_active = 1", connection);
+
+                command.Parameters.AddWithValue("@username", username.Trim());
+
+                using var reader = await command.ExecuteReaderAsync();
+                if (await reader.ReadAsync())
+                {
+                    int userId = reader.GetInt32(0);
+                    string dbUsername = reader.GetString(1);
+                    string dbEmail = reader.GetString(2);
+                    string passwordHash = reader.GetString(3);
+                    string fullName = reader.GetString(4);
+                    bool isActive = reader.GetBoolean(5);
+                    int roleId = reader.GetInt32(6);
+                    string roleName = reader.IsDBNull(7) ? "User" : reader.GetString(7);
+
+                    // Verify password
+                    if (VerifyPassword(password, passwordHash))
+                    {
+                        IsAuthenticated = true;
+                        CurrentUser = username.Trim();
+                        CurrentUserId = userId;
+                        CurrentUserName = fullName;
+                        CurrentUserRoleId = roleId;
+                        CurrentUserRoleName = roleName;
+                        return true;
+                    }
+                }
+
+                return false;
+            }
+            catch (SqlException ex)
+            {
+                if (ex.Message.Contains("Invalid object name 'tbl_users'"))
+                {
+                    Console.WriteLine("tbl_users table doesn't exist yet.");
+                    return false;
+                }
+                Console.WriteLine($"Database error during login: {ex.Message}");
+                return false;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error during login: {ex.Message}");
+                return false;
+            }
         }
 
         public Task LogoutAsync()
         {
             IsAuthenticated = false;
             CurrentUser = string.Empty;
+            CurrentUserId = 0;
+            CurrentUserName = string.Empty;
+            CurrentUserRoleId = 0;
+            CurrentUserRoleName = string.Empty;
             return Task.CompletedTask;
+        }
+
+        // Hash password using SHA256
+        private string HashPassword(string password)
+        {
+            using (SHA256 sha256Hash = SHA256.Create())
+            {
+                byte[] bytes = sha256Hash.ComputeHash(Encoding.UTF8.GetBytes(password));
+                StringBuilder builder = new StringBuilder();
+                for (int i = 0; i < bytes.Length; i++)
+                {
+                    builder.Append(bytes[i].ToString("x2"));
+                }
+                return builder.ToString();
+            }
+        }
+
+        // Verify password
+        private bool VerifyPassword(string password, string hash)
+        {
+            string hashOfInput = HashPassword(password);
+            StringComparer comparer = StringComparer.OrdinalIgnoreCase;
+            return comparer.Compare(hashOfInput, hash) == 0;
         }
     }
 }

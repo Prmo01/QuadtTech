@@ -1,6 +1,7 @@
 ﻿@using MauiApp2.Services
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <link href="css/sidebar.css" rel="stylesheet" />
 
@@ -14,14 +15,14 @@
 
     <!-- Navigation Menu -->
     <nav class="nav-menu">
-        <a href="/dashboard" class="nav-item @GetNavItemClass("dashboard")">
+        <a href="/dashboard" class="nav-item @GetNavItemClass("/dashboard")">
             <span class="nav-icon"><i class="fas fa-chart-line"></i></span>
             <span class="nav-text">Dashboard</span>
         </a>
 
         <!-- User Management with Dropdown -->
         <div class="nav-section">
-            <div class="nav-item nav-section-header @GetNavItemClass("users")" @onclick="ToggleUserManagementMenu">
+            <div class="nav-item nav-section-header @GetNavItemClass("/users", "/roles")" @onclick="ToggleUserManagementMenu">
                 <span class="nav-icon"><i class="fas fa-users"></i></span>
                 <span class="nav-text">User Management</span>
                 <span class="nav-arrow">
@@ -31,61 +32,60 @@
             @if (isUserManagementMenuOpen)
             {
                 <div class="nav-submenu">
-                    <a href="/users" class="nav-subitem @GetNavItemClass("userlist")">
+                    <a href="/users" class="nav-subitem @GetNavItemClass("/users")">
                         <span class="nav-subicon"><i class="fas fa-list"></i></span>
                         <span class="nav-subtext">User List</span>
                     </a>
-                    <a href="/roles" class="nav-subitem @GetNavItemClass("roles")">
+                    <!-- <a href="/roles" class="nav-subitem @GetNavItemClass("/roles")">
                         <span class="nav-subicon"><i class="fas fa-user-shield"></i></span>
                         <span class="nav-subtext">Roles & Permission</span>
-                    </a>
+                    </a> -->
                 </div>
             }
         </div>
 
-        <!-- Inventory Management with Dropdown -->
-        <div class="nav-section">
-            <div class="nav-item nav-section-header @GetNavItemClass("inventory")" @onclick="ToggleInventoryMenu">
-                <span class="nav-icon"><i class="fas fa-boxes"></i></span>
-                <span class="nav-text">Inventory Management</span>
-                <span class="nav-arrow">
-                    <i class="fas fa-chevron-down @(isInventoryMenuOpen ? "open" : "")"></i>
-                </span>
-            </div>
-            @if (isInventoryMenuOpen)
-            {
-                <div class="nav-submenu">
-                    <a href="/products" class="nav-subitem @GetNavItemClass("products")">
-                        <span class="nav-subicon"><i class="fas fa-list"></i></span>
-                        <span class="nav-subtext">Product List</span>
-                    </a>
-                    <a href="/purchase-orders" class="nav-subitem @GetNavItemClass("purchase-orders")">
-                        <span class="nav-subicon"><i class="fa-solid fa-cart-shopping"></i></span>
-                        <span class="nav-subtext">Purchase Order</span>
-                    </a>
-                    <!--<a href="/stockout" class="nav-subitem @GetNavItemClass("stockout")">
-                        <span class="nav-subicon"><i class="fas fa-arrow-up"></i></span>
-                        <span class="nav-subtext">Stock Out</span>
-                    </a>-->
-                    <a href="/stockadjustment" class="nav-subitem @GetNavItemClass("stockadjustment")">
-                        <span class="nav-subicon"><i class="fas fa-exchange-alt"></i></span>
-                        <span class="nav-subtext">Stock Adjustment</span>
-                    </a>
-                    <a href="/categories" class="nav-subitem @GetNavItemClass("category")">
-                        <span class="nav-subicon"><i class="fas fa-tags"></i></span>
-                        <span class="nav-subtext">Category</span>
-                    </a>
-                    <a href="/brands" class="nav-subitem @GetNavItemClass("brand")">
-                        <span class="nav-subicon"><i class="fas fa-copyright"></i></span>
-                        <span class="nav-subtext">Brand</span>
-                    </a>
-                    <a href="/transaction" class="nav-subitem @GetNavItemClass("transaction")">
-                        <span class="nav-subicon"><i class="fas fa-receipt"></i></span>
-                        <span class="nav-subtext">Transaction</span>
-                    </a>
+        <!-- Inventory Management with Dropdown - Only visible for Inventory Manager or Administrator -->
+        @if (CanAccessInventory())
+        {
+            <div class="nav-section">
+                <div class="nav-item nav-section-header @GetNavItemClass("/products", "/purchase-orders", "/stockadjustment", "/categories", "/brands", "/transaction")" @onclick="ToggleInventoryMenu">
+                    <span class="nav-icon"><i class="fas fa-boxes"></i></span>
+                    <span class="nav-text">Inventory Management</span>
+                    <span class="nav-arrow">
+                        <i class="fas fa-chevron-down @(isInventoryMenuOpen ? "open" : "")"></i>
+                    </span>
                 </div>
-            }
-        </div>
+                @if (isInventoryMenuOpen)
+                {
+                    <div class="nav-submenu">
+                        <a href="/products" class="nav-subitem @GetNavItemClass("/products")">
+                            <span class="nav-subicon"><i class="fas fa-list"></i></span>
+                            <span class="nav-subtext">Product List</span>
+                        </a>
+                        <a href="/purchase-orders" class="nav-subitem @GetNavItemClass("/purchase-orders")">
+                            <span class="nav-subicon"><i class="fa-solid fa-cart-shopping"></i></span>
+                            <span class="nav-subtext">Purchase Order</span>
+                        </a>
+                        <a href="/stockadjustment" class="nav-subitem @GetNavItemClass("/stockadjustment")">
+                            <span class="nav-subicon"><i class="fas fa-exchange-alt"></i></span>
+                            <span class="nav-subtext">Stock Adjustment</span>
+                        </a>
+                        <a href="/categories" class="nav-subitem @GetNavItemClass("/categories")">
+                            <span class="nav-subicon"><i class="fas fa-tags"></i></span>
+                            <span class="nav-subtext">Category</span>
+                        </a>
+                        <a href="/brands" class="nav-subitem @GetNavItemClass("/brands")">
+                            <span class="nav-subicon"><i class="fas fa-copyright"></i></span>
+                            <span class="nav-subtext">Brand</span>
+                        </a>
+                        <a href="/transaction" class="nav-subitem @GetNavItemClass("/transaction")">
+                            <span class="nav-subicon"><i class="fas fa-receipt"></i></span>
+                            <span class="nav-subtext">Transaction</span>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
     </nav>
 
     <!-- User Profile Section -->
@@ -94,8 +94,8 @@
             <i class="fas fa-user"></i>
         </div>
         <div class="user-details">
-            <div class="user-name">@AuthService.CurrentUser</div>
-            <div class="user-role">Administrator</div>
+            <div class="user-name">@GetDisplayName()</div>
+            <div class="user-role">@GetUserRole()</div>
         </div>
         <div class="user-menu">
             <button class="user-menu-toggle" @onclick="ToggleUserMenu">
@@ -118,9 +118,127 @@
     private bool showUserMenu = false;
     private bool isUserManagementMenuOpen = false;
     private bool isInventoryMenuOpen = false;
+    private string currentUri = string.Empty;
 
-    [Parameter]
-    public string CurrentPage { get; set; } = "dashboard";
+    protected override void OnInitialized()
+    {
+        // Set initial menu states based on current URI
+        currentUri = Navigation.Uri;
+        SetMenuStates();
+
+        // Debug: Log current role
+        LogCurrentRole();
+
+        // Subscribe to location changes to keep menus open
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Force state check after first render
+            LogCurrentRole();
+        }
+    }
+
+    private void LogCurrentRole()
+    {
+        if (AuthService != null)
+        {
+            string role = AuthService.CurrentUserRoleName ?? "(null)";
+            Console.WriteLine($"[Sidebar] Current User Role: '{role}'");
+            Console.WriteLine($"[Sidebar] Role Length: {role.Length}");
+            Console.WriteLine($"[Sidebar] Can Access Inventory: {CanAccessInventory()}");
+        }
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        currentUri = e.Location;
+        SetMenuStates();
+        StateHasChanged();
+    }
+
+    private void SetMenuStates()
+    {
+        // Keep User Management menu open if on users or roles pages
+        if (currentUri.Contains("/users") || currentUri.Contains("/roles"))
+        {
+            isUserManagementMenuOpen = true;
+        }
+
+        // Keep Inventory Management menu open if on any inventory pages (only if user has access)
+        if (CanAccessInventory())
+        {
+            if (currentUri.Contains("/products") ||
+                currentUri.Contains("/purchase-orders") ||
+                currentUri.Contains("/stockadjustment") ||
+                currentUri.Contains("/categories") ||
+                currentUri.Contains("/brands") ||
+                currentUri.Contains("/transaction"))
+            {
+                isInventoryMenuOpen = true;
+            }
+        }
+    }
+
+    // Check if user can access inventory management
+    // Only "Inventory Manager" and "Administrator" roles can access
+    private bool CanAccessInventory()
+    {
+        if (AuthService == null)
+        {
+            Console.WriteLine("[Sidebar] AuthService is null");
+            return false;
+        }
+
+        // Get user's role name from database and trim whitespace
+        string userRole = (AuthService.CurrentUserRoleName ?? "").Trim();
+
+        // Debug logging
+        Console.WriteLine($"[Sidebar] Checking role access. User Role: '{userRole}'");
+
+        // Check against exact role names (case-insensitive, trimmed)
+        bool canAccess = userRole.Equals("Inventory Manager", StringComparison.OrdinalIgnoreCase) ||
+                         userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
+
+        Console.WriteLine($"[Sidebar] Can Access Inventory: {canAccess}");
+
+        return canAccess;
+    }
+
+    private string GetDisplayName()
+    {
+        if (AuthService == null)
+            return "User";
+
+        // Show full name if available, otherwise show username/email
+        if (!string.IsNullOrWhiteSpace(AuthService.CurrentUserName))
+        {
+            return AuthService.CurrentUserName;
+        }
+        else if (!string.IsNullOrWhiteSpace(AuthService.CurrentUser))
+        {
+            return AuthService.CurrentUser;
+        }
+
+        return "User";
+    }
+
+    private string GetUserRole()
+    {
+        if (AuthService == null)
+            return "User";
+
+        // Show role name from database
+        if (!string.IsNullOrWhiteSpace(AuthService.CurrentUserRoleName))
+        {
+            return AuthService.CurrentUserRoleName.Trim();
+        }
+
+        return "User";
+    }
 
     private void ToggleUserMenu()
     {
@@ -137,9 +255,20 @@
         isInventoryMenuOpen = !isInventoryMenuOpen;
     }
 
-    private string GetNavItemClass(string page)
+    private string GetNavItemClass(params string[] paths)
     {
-        return CurrentPage == page ? "active" : "";
+        if (paths == null || paths.Length == 0)
+            return "";
+
+        foreach (var path in paths)
+        {
+            if (Navigation.Uri.Contains(path, StringComparison.OrdinalIgnoreCase))
+            {
+                return "active";
+            }
+        }
+
+        return "";
     }
 
     private async Task Logout()
@@ -147,5 +276,10 @@
         showUserMenu = false;
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/");
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

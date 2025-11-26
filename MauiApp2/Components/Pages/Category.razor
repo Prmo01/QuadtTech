@@ -100,16 +100,11 @@
                                         </div>
                                     </td>
                                     <td>
-                                        <button class="brand-edit-btn" 
+                                        <button class="brand-edit-btn"
                                                 @onclick="() => ShowEditModal(category)"
                                                 disabled="@isLoading">
                                             Edit
                                         </button>
-                                        <!--<button class="brand-delete-btn" 
-                                                @onclick="() => DeleteCategory(category.category_id)"
-                                                disabled="@isLoading">
-                                            Delete
-                                        </button>-->
                                     </td>
                                 </tr>
                             }
@@ -166,6 +161,7 @@
                         <input type="text"
                                class="brand-form-control @(HasError("CategoryName") ? "input-error" : "")"
                                @bind="newCategoryName"
+                               @bind:event="oninput"
                                placeholder="Enter category name"
                                maxlength="100"
                                disabled="@isLoading" />
@@ -179,6 +175,7 @@
                         <label>Description</label>
                         <textarea class="brand-form-control brand-textarea"
                                   @bind="newDescription"
+                                  @bind:event="oninput"
                                   placeholder="Enter category description (optional)"
                                   maxlength="500"
                                   rows="4"
@@ -233,6 +230,7 @@
                         <input type="text"
                                class="brand-form-control @(HasEditError("CategoryName") ? "input-error" : "")"
                                @bind="editCategoryName"
+                               @bind:event="oninput"
                                placeholder="Enter category name"
                                maxlength="100"
                                disabled="@isLoading" />
@@ -246,6 +244,7 @@
                         <label>Description</label>
                         <textarea class="brand-form-control brand-textarea"
                                   @bind="editDescription"
+                                  @bind:event="oninput"
                                   placeholder="Enter category description (optional)"
                                   maxlength="500"
                                   rows="4"
@@ -294,7 +293,22 @@
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadCategories();
+        try
+        {
+            if (CategoryService == null)
+            {
+                errorMessage = "CategoryService is not available. Please check service registration.";
+                Console.WriteLine("CategoryService is null");
+                return;
+            }
+
+            await LoadCategories();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error initializing: {ex.Message}";
+            Console.WriteLine($"OnInitializedAsync error: {ex}");
+        }
     }
 
     private async Task LoadCategories()
@@ -305,12 +319,29 @@
             errorMessage = "";
             StateHasChanged();
 
+            if (CategoryService == null)
+            {
+                errorMessage = "CategoryService is not available. Please check service registration.";
+                Console.WriteLine("CategoryService is null in LoadCategories");
+                categories = new List<MauiApp2.Models.Category>();
+                return;
+            }
+
             categories = await CategoryService.GetCategoriesAsync();
+
+            if (categories == null)
+            {
+                categories = new List<MauiApp2.Models.Category>();
+            }
+
+            Console.WriteLine($"Loaded {categories.Count} categories");
         }
         catch (Exception ex)
         {
             errorMessage = $"Error loading categories: {ex.Message}";
-            Console.WriteLine($"Error: {ex.Message}");
+            Console.WriteLine($"LoadCategories error: {ex}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+            categories = new List<MauiApp2.Models.Category>();
         }
         finally
         {
@@ -402,11 +433,17 @@
         validationErrors.Clear();
 
         if (string.IsNullOrWhiteSpace(newCategoryName))
+        {
             AddValidationError("CategoryName", "Category name is required");
-        else if (newCategoryName.Length < 2)
+        }
+        else if (newCategoryName.Trim().Length < 2)
+        {
             AddValidationError("CategoryName", "Category name must be at least 2 characters long");
-        else if (categories.Any(c => c.category_name.Equals(newCategoryName, StringComparison.OrdinalIgnoreCase)))
+        }
+        else if (categories.Any(c => c.category_name.Equals(newCategoryName.Trim(), StringComparison.OrdinalIgnoreCase)))
+        {
             AddValidationError("CategoryName", "Category name already exists");
+        }
     }
 
     private void ValidateEditForm()
@@ -414,11 +451,17 @@
         editValidationErrors.Clear();
 
         if (string.IsNullOrWhiteSpace(editCategoryName))
+        {
             AddEditValidationError("CategoryName", "Category name is required");
-        else if (editCategoryName.Length < 2)
+        }
+        else if (editCategoryName.Trim().Length < 2)
+        {
             AddEditValidationError("CategoryName", "Category name must be at least 2 characters long");
-        else if (categories.Any(c => c.category_name.Equals(editCategoryName, StringComparison.OrdinalIgnoreCase) && c.category_id != editingCategory?.category_id))
+        }
+        else if (categories.Any(c => c.category_name.Equals(editCategoryName.Trim(), StringComparison.OrdinalIgnoreCase) && c.category_id != editingCategory?.category_id))
+        {
             AddEditValidationError("CategoryName", "Category name already exists");
+        }
     }
 
     private void AddValidationError(string field, string message)
@@ -472,35 +515,76 @@
     // CRUD Operations
     private async Task AddCategory()
     {
-        ValidateAddForm();
-
-        if (!IsFormValid)
-        {
-            errorMessage = "Please fix the validation errors before submitting.";
-            return;
-        }
-
         try
         {
+            // Clear previous messages
+            ClearMessages();
+            StateHasChanged();
+
+            // Validate form
+            ValidateAddForm();
+
+            if (!IsFormValid)
+            {
+                errorMessage = "Please fix the validation errors before submitting.";
+                Console.WriteLine($"Validation failed. Errors: {string.Join(", ", validationErrors)}");
+                StateHasChanged();
+                return;
+            }
+
+            // Check if service is available
+            if (CategoryService == null)
+            {
+                errorMessage = "CategoryService is not available. Please check service registration.";
+                Console.WriteLine("CategoryService is null in AddCategory");
+                StateHasChanged();
+                return;
+            }
+
             isLoading = true;
             StateHasChanged();
 
+            // Create category object
             var newCategory = new MauiApp2.Models.Category
             {
                 category_name = newCategoryName.Trim(),
                 description = string.IsNullOrWhiteSpace(newDescription) ? null : newDescription.Trim()
             };
 
+            Console.WriteLine($"Attempting to add category: {newCategory.category_name}");
+
+            // Call service to create category
             var categoryId = await CategoryService.CreateCategoryAsync(newCategory);
-            
-            successMessage = $"Category '{newCategoryName}' added successfully!";
-            
-            await LoadCategories(); // Refresh the list
-            CloseAddModal();
+
+            Console.WriteLine($"Category created successfully with ID: {categoryId}");
+
+            if (categoryId > 0)
+            {
+                successMessage = $"Category '{newCategory.category_name}' added successfully!";
+
+                // Refresh the list
+                await LoadCategories();
+
+                // Close modal
+                CloseAddModal();
+            }
+            else
+            {
+                errorMessage = "Failed to create category. Please try again.";
+            }
         }
         catch (Exception ex)
         {
             errorMessage = $"Error adding category: {ex.Message}";
+            Console.WriteLine($"AddCategory error: {ex}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+
+            // Log inner exception if available
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                errorMessage += $" ({ex.InnerException.Message})";
+            }
         }
         finally
         {
@@ -511,19 +595,36 @@
 
     private async Task UpdateCategory()
     {
-        ValidateEditForm();
-
-        if (!IsEditFormValid || editingCategory == null)
-        {
-            errorMessage = "Please fix the validation errors before submitting.";
-            return;
-        }
-
         try
         {
+            // Clear previous messages
+            ClearMessages();
+            StateHasChanged();
+
+            // Validate form
+            ValidateEditForm();
+
+            if (!IsEditFormValid || editingCategory == null)
+            {
+                errorMessage = "Please fix the validation errors before submitting.";
+                Console.WriteLine($"Validation failed. Errors: {string.Join(", ", editValidationErrors)}");
+                StateHasChanged();
+                return;
+            }
+
+            // Check if service is available
+            if (CategoryService == null)
+            {
+                errorMessage = "CategoryService is not available. Please check service registration.";
+                Console.WriteLine("CategoryService is null in UpdateCategory");
+                StateHasChanged();
+                return;
+            }
+
             isLoading = true;
             StateHasChanged();
 
+            // Create updated category object
             var updatedCategory = new MauiApp2.Models.Category
             {
                 category_id = editingCategory.category_id,
@@ -531,12 +632,20 @@
                 description = string.IsNullOrWhiteSpace(editDescription) ? null : editDescription.Trim()
             };
 
+            Console.WriteLine($"Attempting to update category ID {updatedCategory.category_id}: {updatedCategory.category_name}");
+
+            // Call service to update category
             var success = await CategoryService.UpdateCategoryAsync(updatedCategory);
-            
+
             if (success)
             {
+                Console.WriteLine("Category updated successfully");
                 successMessage = $"Category '{editCategoryName}' updated successfully!";
-                await LoadCategories(); // Refresh the list
+
+                // Refresh the list
+                await LoadCategories();
+
+                // Close modal
                 CloseEditModal();
             }
             else
@@ -547,6 +656,15 @@
         catch (Exception ex)
         {
             errorMessage = $"Error updating category: {ex.Message}";
+            Console.WriteLine($"UpdateCategory error: {ex}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
+
+            // Log inner exception if available
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"Inner exception: {ex.InnerException.Message}");
+                errorMessage += $" ({ex.InnerException.Message})";
+            }
         }
         finally
         {
@@ -568,8 +686,14 @@
             isLoading = true;
             StateHasChanged();
 
+            if (CategoryService == null)
+            {
+                errorMessage = "CategoryService is not available. Please check service registration.";
+                return;
+            }
+
             var success = await CategoryService.DeleteCategoryAsync(categoryId);
-            
+
             if (success)
             {
                 successMessage = $"Category '{categoryToDelete.category_name}' deleted successfully!";
@@ -583,6 +707,8 @@
         catch (Exception ex)
         {
             errorMessage = $"Error deleting category: {ex.Message}";
+            Console.WriteLine($"DeleteCategory error: {ex}");
+            Console.WriteLine($"Stack trace: {ex.StackTrace}");
         }
         finally
         {
