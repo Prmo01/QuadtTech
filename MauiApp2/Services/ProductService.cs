@@ -33,7 +33,7 @@ namespace MauiApp2.Services
                 var command = new SqlCommand(@"
                     SELECT product_id, brand_id, category_id, product_name, product_sku, 
                            model_number, cost_price, sell_price, quantity, status, 
-                           created_date, modified_date, tax_id, is_tax_inclusive 
+                           created_date, modified_date 
                     FROM tbl_product 
                     ORDER BY product_name", connection);
 
@@ -53,9 +53,7 @@ namespace MauiApp2.Services
                         quantity = reader.IsDBNull(8) ? null : reader.GetInt32(8),
                         status = reader.IsDBNull(9) ? null : reader.GetBoolean(9),
                         created_date = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
-                        tax_id = reader.IsDBNull(12) ? 1 : reader.GetInt32(12),
-                        is_tax_inclusive = reader.IsDBNull(13) ? true : reader.GetBoolean(13)
+                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
                     });
                 }
             }
@@ -196,10 +194,10 @@ namespace MauiApp2.Services
                 var command = new SqlCommand(@"
                     INSERT INTO tbl_product (brand_id, category_id, product_name, product_sku, 
                                              model_number, cost_price, sell_price, quantity, 
-                                             status, created_date, modified_date, tax_id, is_tax_inclusive)
+                                             status, created_date, modified_date)
                     VALUES (@brand_id, @category_id, @product_name, @product_sku, 
                             @model_number, @cost_price, @sell_price, @quantity, 
-                            @status, @created_date, @modified_date, @tax_id, @is_tax_inclusive);
+                            @status, @created_date, @modified_date);
                     SELECT SCOPE_IDENTITY();", connection);
 
                 command.Parameters.AddWithValue("@brand_id", (object)product.brand_id ?? DBNull.Value);
@@ -213,8 +211,6 @@ namespace MauiApp2.Services
                 command.Parameters.AddWithValue("@status", (object)product.status ?? DBNull.Value);
                 command.Parameters.AddWithValue("@created_date", product.created_date ?? DateTime.Now);
                 command.Parameters.AddWithValue("@modified_date", product.modified_date ?? DateTime.Now);
-                command.Parameters.AddWithValue("@tax_id", (object)product.tax_id ?? 1);
-                command.Parameters.AddWithValue("@is_tax_inclusive", product.is_tax_inclusive);
 
                 var result = await command.ExecuteScalarAsync();
 
@@ -256,9 +252,7 @@ namespace MauiApp2.Services
                         sell_price = @sell_price, 
                         quantity = @quantity, 
                         status = @status, 
-                        modified_date = @modified_date,
-                        tax_id = @tax_id,
-                        is_tax_inclusive = @is_tax_inclusive
+                        modified_date = @modified_date
                     WHERE product_id = @product_id", connection);
 
                 command.Parameters.AddWithValue("@product_id", product.product_id);
@@ -272,8 +266,6 @@ namespace MauiApp2.Services
                 command.Parameters.AddWithValue("@quantity", (object)product.quantity ?? DBNull.Value);
                 command.Parameters.AddWithValue("@status", (object)product.status ?? DBNull.Value);
                 command.Parameters.AddWithValue("@modified_date", DateTime.Now);
-                command.Parameters.AddWithValue("@tax_id", (object)product.tax_id ?? 1);
-                command.Parameters.AddWithValue("@is_tax_inclusive", product.is_tax_inclusive);
 
                 return await command.ExecuteNonQueryAsync() > 0;
             }
@@ -321,7 +313,7 @@ namespace MauiApp2.Services
                 var command = new SqlCommand(@"
                     SELECT product_id, brand_id, category_id, product_name, product_sku, 
                            model_number, cost_price, sell_price, quantity, status, 
-                           created_date, modified_date, tax_id, is_tax_inclusive 
+                           created_date, modified_date 
                     FROM tbl_product 
                     WHERE product_id = @product_id", connection);
 
@@ -343,9 +335,7 @@ namespace MauiApp2.Services
                         quantity = reader.IsDBNull(8) ? null : reader.GetInt32(8),
                         status = reader.IsDBNull(9) ? null : reader.GetBoolean(9),
                         created_date = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
-                        tax_id = reader.IsDBNull(12) ? 1 : reader.GetInt32(12),
-                        is_tax_inclusive = reader.IsDBNull(13) ? true : reader.GetBoolean(13)
+                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
                     };
                 }
 
@@ -368,7 +358,7 @@ namespace MauiApp2.Services
                 var command = new SqlCommand(@"
                     SELECT product_id, brand_id, category_id, product_name, product_sku, 
                            model_number, cost_price, sell_price, quantity, status, 
-                           created_date, modified_date, tax_id, is_tax_inclusive 
+                           created_date, modified_date 
                     FROM tbl_product 
                     WHERE product_sku = @product_sku", connection);
 
@@ -390,9 +380,7 @@ namespace MauiApp2.Services
                         quantity = reader.IsDBNull(8) ? null : reader.GetInt32(8),
                         status = reader.IsDBNull(9) ? null : reader.GetBoolean(9),
                         created_date = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
-                        tax_id = reader.IsDBNull(12) ? 1 : reader.GetInt32(12),
-                        is_tax_inclusive = reader.IsDBNull(13) ? true : reader.GetBoolean(13)
+                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
                     };
                 }
 

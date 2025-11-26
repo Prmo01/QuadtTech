@@ -22,9 +22,5 @@ namespace MauiApp2.Models
         public bool? status { get; set; }
         public DateTime? created_date { get; set; }
         public DateTime? modified_date { get; set; }
-        
-        // Tax fields (Philippine tax support)
-        public int? tax_id { get; set; } = 1; // Default to VAT 12%
-        public bool is_tax_inclusive { get; set; } = true; // PH retail standard - price includes tax
     }
 }
