@@ -52,6 +52,10 @@
     {
         <link href="css/category.css" rel="stylesheet" />
     }
+    else if (CurrentPage == "reports")
+    {
+        <link href="css/Reports.css" rel="stylesheet" />
+    }
 </head>
 <body>
     <div>
@@ -77,6 +81,7 @@
          if (uri.Contains("/category")) return "category";
          if (uri.Contains("/users")) return "users";
           if (uri.Contains("/category")) return "category";
+        if (uri.Contains("/reports")) return "reports";
         return "other";
     }
 

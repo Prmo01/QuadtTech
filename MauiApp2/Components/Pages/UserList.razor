@@ -1,901 +1,1816 @@
 ﻿@page "/users"
+
 @layout MainLayout
+
 @using MauiApp2.Services
+
 @using MauiApp2.Models
+
 @inject IAuthService AuthService
+
 @inject IUserService UserService
+
 @inject IRoleService RoleService
+
 @inject NavigationManager Navigation
 
-<link href="css/pagination.css" rel="stylesheet" />
+<link href="css/userlist.css" rel="stylesheet" />
 
 <div class="dashboard-wrapper">
+
     <Sidebar />
 
     <div class="main-content">
+
         <div class="content-header">
+
             <h1>User Management</h1>
+
             <p>Manage system users and their permissions</p>
+
         </div>
 
         <div class="inventory-section">
+
             <div class="tab-section">
+
                 <div class="tabs">
+
                     <button class="tab active">User List</button>
+
                 </div>
+
             </div>
 
             <div class="product-table-container">
+
                 <!-- Alert Messages -->
                 @if (!string.IsNullOrEmpty(errorMessage))
+
                 {
+
                     <div class="alert alert-error">
+
                         <span class="alert-icon">⚠️</span>
+
                         <span>@errorMessage</span>
+
                         <button class="alert-close" @onclick="ClearErrorMessage">×</button>
+
                     </div>
+
                 }
 
                 @if (!string.IsNullOrEmpty(successMessage))
+
                 {
+
                     <div class="alert alert-success">
+
                         <span class="alert-icon">✅</span>
+
                         <span>@successMessage</span>
+
                         <button class="alert-close" @onclick="ClearSuccessMessage">×</button>
+
                     </div>
+
                 }
 
                 <div class="toolbar">
+
                     <button class="add-item-btn" @onclick="ShowAddModal">
+
                         Add User
+
                     </button>
 
                     <div class="search-container">
+
                         <input type="text"
                                class="search-input"
                                placeholder="Search users by name, username, or email..."
                                value="@searchQuery"
                                @oninput="OnSearchInput" />
-                        
+
+
+
                     </div>
+
                 </div>
 
                 <table class="product-table">
+
                     <thead>
+
                         <tr>
+
                             <th>User ID</th>
+
                             <th>Full Name</th>
+
                             <th>Username</th>
+
                             <th>Email</th>
+
                             <th>Role</th>
+
                             <th>Status</th>
+
                             <th>Last Login</th>
+
                             <th>Actions</th>
+
                         </tr>
+
                     </thead>
+
                     <tbody>
+
                         @if (PaginatedUsers.Any())
+
                         {
+
                             @foreach (var user in PaginatedUsers)
+
                             {
+
                                 <tr>
+
                                     <td>@user.user_id</td>
+
                                     <td>@user.full_name</td>
+
                                     <td>@user.username</td>
+
                                     <td>@user.email</td>
+
                                     <td>
+
                                         <span class="status-badge role-badge">@GetRoleName(user.role_id)</span>
+
                                     </td>
+
                                     <td>
+
                                         <span class="status-badge @(user.is_active ? "active" : "inactive")">
+
                                             @(user.is_active ? "Active" : "Inactive")
+
                                         </span>
+
                                     </td>
+
                                     <td>@(user.last_login?.ToString("MMM dd, yyyy HH:mm") ?? "Never")</td>
+
                                     <td>
+
                                         <button class="edit-btn" @onclick="() => ShowEditModal(user)" title="Edit User">
+
                                             Edit
+
                                         </button>
+
                                     </td>
+
                                 </tr>
+
                             }
+
                         }
+
                         else
+
                         {
+
                             <tr>
+
                                 <td colspan="8" style="text-align: center; padding: 40px; color: #6b7280;">
+
                                     @if (string.IsNullOrWhiteSpace(searchQuery))
+
                                     {
+
                                         <span>No users found. Click "Add User" to create your first user.</span>
+
                                     }
+
                                     else
+
                                     {
+
                                         <span>No users match your search criteria.</span>
+
                                     }
+
                                 </td>
+
                             </tr>
+
                         }
+
                     </tbody>
+
                 </table>
 
                 <!-- Pagination -->
                 @if (FilteredUsers.Any())
+
                 {
+
                     <Pagination CurrentPage="@currentPage"
                                 PageSize="@pageSize"
                                 TotalItems="@FilteredUsers.Count()"
                                 PageChanged="@OnPageChanged"
                                 PageSizeChanged="@OnPageSizeChanged" />
+
                 }
+
             </div>
+
         </div>
+
     </div>
+
 </div>
 
 <!-- Add User Modal -->
 @if (showAddModal)
+
 {
+
     <div class="modal-overlay" @onclick="CloseAddModal">
+
         <div class="modal-content" @onclick:stopPropagation="true">
+
             <div class="modal-header">
+
                 <h3>Add New User</h3>
+
                 <button class="modal-close" @onclick="CloseAddModal">×</button>
+
             </div>
+
             <div class="modal-body">
-                <!-- Validation Summary -->
-                @if (validationErrors?.Any() == true)
+
+                <!-- Validation Summary - Show at top when there are errors (only after submit attempt) -->
+                @if (hasAttemptedSubmit && validationErrors?.Any() == true)
+
                 {
+
                     <div class="validation-summary">
+
                         <h4>Please fix the following errors:</h4>
+
                         <ul>
+
                             @foreach (var error in validationErrors)
+
                             {
-                                <li>@error</li>
+
+                                var parts = error.Split('|', 2);
+
+                                var errorMessage = parts.Length > 1 ? parts[1] : error;
+
+                                <li>@errorMessage</li>
+
                             }
+
                         </ul>
+
                     </div>
+
+                }
+
+                @if (!string.IsNullOrEmpty(modalErrorMessage))
+
+                {
+
+                    <div class="alert alert-error" style="margin-bottom: 20px;">
+
+                        <span class="alert-icon">⚠️</span>
+
+                        <span>@modalErrorMessage</span>
+
+                        <button class="alert-close" @onclick="ClearModalError">×</button>
+
+                    </div>
+
                 }
 
                 @if (!string.IsNullOrEmpty(rolesErrorMessage))
+
                 {
+
                     <div class="alert alert-error" style="margin-bottom: 20px;">
+
                         <span class="alert-icon">⚠️</span>
+
                         <span>@rolesErrorMessage</span>
+
                     </div>
+
                 }
 
                 <div class="form-container">
+
                     <div class="form-group">
+
                         <label>Full Name *</label>
+
                         <input type="text"
-                               class="form-control @(HasError("FullName") ? "input-error" : "")"
+                               class="form-control @(hasAttemptedSubmit && HasError("FullName") ? "input-error" : "")"
                                @bind="newFullName"
                                placeholder="Enter full name"
                                maxlength="100" />
-                        @if (HasError("FullName"))
+
+                        @if (hasAttemptedSubmit && HasError("FullName"))
+
                         {
+
                             <span class="field-error">@GetError("FullName")</span>
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Username *</label>
+
                         <input type="text"
-                               class="form-control @(HasError("Username") ? "input-error" : "")"
+                               class="form-control @(hasAttemptedSubmit && HasError("Username") ? "input-error" : "")"
                                @bind="newUsername"
                                placeholder="Enter username"
                                maxlength="50" />
-                        @if (HasError("Username"))
+
+                        @if (hasAttemptedSubmit && HasError("Username"))
+
                         {
+
                             <span class="field-error">@GetError("Username")</span>
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Email *</label>
+
                         <input type="email"
-                               class="form-control @(HasError("Email") ? "input-error" : "")"
+                               class="form-control @(hasAttemptedSubmit && HasError("Email") ? "input-error" : "")"
                                @bind="newEmail"
                                placeholder="Enter email address"
                                maxlength="100" />
-                        @if (HasError("Email"))
+
+                        @if (hasAttemptedSubmit && HasError("Email"))
+
                         {
+
                             <span class="field-error">@GetError("Email")</span>
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Password *</label>
+
                         <input type="password"
-                               class="form-control @(HasError("Password") ? "input-error" : "")"
+                               class="form-control @(hasAttemptedSubmit && HasError("Password") ? "input-error" : "")"
                                @bind="newPassword"
                                placeholder="Enter password (min 12 chars, uppercase, number, special char)"
                                maxlength="100" />
-                        @if (HasError("Password"))
+
+                        @if (hasAttemptedSubmit && HasError("Password"))
+
                         {
+
                             <span class="field-error">@GetError("Password")</span>
+
                         }
+
                         <small class="form-help">Must be at least 12 characters with uppercase, number, and special character</small>
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Role *</label>
+
                         @if (availableRoles == null || !availableRoles.Any())
+
                         {
+
                             <select class="form-control input-error" disabled>
+
                                 <option>No roles available in database</option>
+
                             </select>
+
                             <span class="field-error">Please add roles to the database first</span>
+
                         }
+
                         else
+
                         {
-                            <select class="form-control @(HasError("Role") ? "input-error" : "")"
-                                    @bind="newRoleId"
-                                    @bind:after="StateHasChanged">
+
+                            <select class="form-control @(hasAttemptedSubmit && HasError("Role") ? "input-error" : "")"
+                                    @bind="newRoleId">
+
                                 <option value="0">Select Role</option>
+
                                 @foreach (var role in availableRoles)
+
                                 {
+
                                     <option value="@role.role_id">@role.role_name</option>
+
                                 }
+
                             </select>
-                            @if (HasError("Role"))
+
+                            @if (hasAttemptedSubmit && HasError("Role"))
+
                             {
+
                                 <span class="field-error">@GetError("Role")</span>
+
                             }
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Status *</label>
-                        <select class="form-control @(HasError("Status") ? "input-error" : "")"
+
+                        <select class="form-control"
                                 value="@(newIsActive.ToString().ToLower())"
                                 @onchange="OnNewStatusChanged">
+
                             <option value="true">Active</option>
+
                             <option value="false">Inactive</option>
+
                         </select>
-                        @if (HasError("Status"))
-                        {
-                            <span class="field-error">@GetError("Status")</span>
-                        }
+
                     </div>
+
                 </div>
+
             </div>
+
             <div class="modal-footer">
+
                 <button class="btn-cancel" @onclick="CloseAddModal">Cancel</button>
-                <button class="btn-submit" @onclick="AddUser" disabled="@(!IsFormValid || availableRoles == null || !availableRoles.Any())">Add User</button>
+
+                <button class="btn-submit" @onclick="AddUser" disabled="@(isAddingUser || availableRoles == null || !availableRoles.Any())">
+
+                    @if (isAddingUser)
+
+                    {
+
+                        <span>Adding...</span>
+
+                    }
+
+                    else
+
+                    {
+
+                        <span>Add User</span>
+
+                    }
+
+                </button>
+
             </div>
+
         </div>
+
     </div>
+
 }
 
 <!-- Edit User Modal -->
 @if (showEditModal && editingUser != null)
+
 {
+
     <div class="modal-overlay" @onclick="CloseEditModal">
+
         <div class="modal-content" @onclick:stopPropagation="true">
+
             <div class="modal-header">
+
                 <h3>Edit User</h3>
+
                 <button class="modal-close" @onclick="CloseEditModal">×</button>
+
             </div>
+
             <div class="modal-body">
+
                 <!-- Validation Summary -->
                 @if (editValidationErrors?.Any() == true)
+
                 {
+
                     <div class="validation-summary">
+
                         <h4>Please fix the following errors:</h4>
+
                         <ul>
+
                             @foreach (var error in editValidationErrors)
+
                             {
-                                <li>@error</li>
+
+                                var parts = error.Split('|', 2);
+
+                                var errorMessage = parts.Length > 1 ? parts[1] : error;
+
+                                <li>@errorMessage</li>
+
                             }
+
                         </ul>
+
                     </div>
+
                 }
 
                 @if (!string.IsNullOrEmpty(rolesErrorMessage))
+
                 {
+
                     <div class="alert alert-error" style="margin-bottom: 20px;">
+
                         <span class="alert-icon">⚠️</span>
+
                         <span>@rolesErrorMessage</span>
+
                     </div>
+
                 }
 
                 <div class="form-container">
+
                     <div class="form-group">
+
                         <label>User ID</label>
+
                         <input type="text"
                                class="form-control"
                                value="@editingUser.user_id"
                                disabled />
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Full Name *</label>
+
                         <input type="text"
                                class="form-control @(HasEditError("FullName") ? "input-error" : "")"
                                @bind="editFullName"
                                placeholder="Enter full name"
                                maxlength="100" />
+
                         @if (HasEditError("FullName"))
+
                         {
+
                             <span class="field-error">@GetEditError("FullName")</span>
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Username *</label>
+
                         <input type="text"
                                class="form-control @(HasEditError("Username") ? "input-error" : "")"
                                @bind="editUsername"
                                placeholder="Enter username"
                                maxlength="50" />
+
                         @if (HasEditError("Username"))
+
                         {
+
                             <span class="field-error">@GetEditError("Username")</span>
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Email *</label>
+
                         <input type="email"
                                class="form-control @(HasEditError("Email") ? "input-error" : "")"
                                @bind="editEmail"
                                placeholder="Enter email address"
                                maxlength="100" />
+
                         @if (HasEditError("Email"))
+
                         {
+
                             <span class="field-error">@GetEditError("Email")</span>
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Role *</label>
+
                         @if (availableRoles == null || !availableRoles.Any())
+
                         {
+
                             <select class="form-control input-error" disabled>
+
                                 <option>No roles available in database</option>
+
                             </select>
+
                             <span class="field-error">Please add roles to the database first</span>
+
                         }
+
                         else
+
                         {
+
                             <select class="form-control @(HasEditError("Role") ? "input-error" : "")"
                                     @bind="editRoleId"
                                     @bind:after="StateHasChanged">
+
                                 <option value="0">Select Role</option>
+
                                 @foreach (var role in availableRoles)
+
                                 {
+
                                     <option value="@role.role_id">@role.role_name</option>
+
                                 }
+
                             </select>
+
                             @if (HasEditError("Role"))
+
                             {
+
                                 <span class="field-error">@GetEditError("Role")</span>
+
                             }
+
                         }
+
                     </div>
 
                     <div class="form-group">
+
                         <label>Status *</label>
+
                         <select class="form-control @(HasEditError("Status") ? "input-error" : "")"
                                 value="@(editIsActive.ToString().ToLower())"
                                 @onchange="OnEditStatusChanged">
+
                             <option value="true">Active</option>
+
                             <option value="false">Inactive</option>
+
                         </select>
+
                         @if (HasEditError("Status"))
+
                         {
+
                             <span class="field-error">@GetEditError("Status")</span>
+
                         }
+
                     </div>
+
                 </div>
+
             </div>
+
             <div class="modal-footer">
+
                 <button class="btn-cancel" @onclick="CloseEditModal">Cancel</button>
+
                 <button class="btn-submit" @onclick="UpdateUser" disabled="@(!IsEditFormValid || availableRoles == null || !availableRoles.Any())">Update User</button>
+
             </div>
+
         </div>
+
     </div>
+
 }
 
 @code {
+
     private string searchQuery = "";
+
     private List<MauiApp2.Models.User> users = new();
+
     private List<Role> availableRoles = new();
+
     private bool showAddModal = false;
+
     private bool showEditModal = false;
+
     private MauiApp2.Models.User? editingUser = null;
+
     private string rolesErrorMessage = "";
 
+    private bool isAddingUser = false; // Loading state for Add User button
+
     // Pagination
+
     private int currentPage = 1;
+
     private int pageSize = 10;
 
     // Add form fields
+
     private string newFullName = "";
+
     private string newUsername = "";
+
     private string newEmail = "";
+
     private string newPassword = "";
+
     private int newRoleId = 0;
+
     private bool newIsActive = true;
 
     // Edit form fields
+
     private string editFullName = "";
+
     private string editUsername = "";
+
     private string editEmail = "";
+
     private int editRoleId = 0;
+
     private bool editIsActive = true;
 
     // Messages and validation
+
     private string errorMessage = "";
+
     private string successMessage = "";
+
+    private string modalErrorMessage = ""; // Error message specific to modal
+
     private List<string> validationErrors = new List<string>();
+
     private List<string> editValidationErrors = new List<string>();
 
+    private bool hasAttemptedSubmit = false; // Track if user has attempted to submit
+
     protected override async Task OnInitializedAsync()
+
     {
+
         await LoadDataAsync();
+
     }
 
     private async Task LoadDataAsync()
+
     {
+
         try
+
         {
+
             // Load roles first from database
+
             await LoadRoles();
+
             // Then load users
+
             await LoadUsers();
+
         }
+
         catch (Exception ex)
+
         {
+
             errorMessage = $"Error loading data: {ex.Message}";
+
             Console.WriteLine($"LoadDataAsync error: {ex}");
+
         }
+
         StateHasChanged();
+
     }
 
     private async Task LoadUsers()
+
     {
+
         try
+
         {
+
             if (UserService == null)
+
             {
+
                 errorMessage = "UserService is not available. Please check service registration.";
+
                 Console.WriteLine("UserService is null");
+
                 users = new List<MauiApp2.Models.User>();
+
                 return;
+
             }
 
             users = await UserService.GetUsersAsync();
+
             if (users == null)
+
             {
+
                 users = new List<MauiApp2.Models.User>();
+
             }
+
         }
+
         catch (Exception ex)
+
         {
+
             errorMessage = $"Error loading users: {ex.Message}";
+
             Console.WriteLine($"LoadUsers error: {ex}");
+
             users = new List<MauiApp2.Models.User>();
+
         }
+
     }
 
     private async Task LoadRoles()
+
     {
+
         try
+
         {
+
             rolesErrorMessage = ""; // Clear previous error
-            
+
+
+
             if (RoleService == null)
+
             {
+
                 rolesErrorMessage = "RoleService is not available. Please check service registration.";
+
                 Console.WriteLine("RoleService is null");
+
                 availableRoles = new List<Role>();
+
                 StateHasChanged();
+
                 return;
+
             }
 
             // Load roles FROM DATABASE via RoleService
+
             availableRoles = await RoleService.GetRolesAsync();
-            
+
+
+
             if (availableRoles == null)
+
             {
+
                 availableRoles = new List<Role>();
+
                 rolesErrorMessage = "Failed to load roles from database.";
+
             }
+
             else if (!availableRoles.Any())
+
             {
+
                 rolesErrorMessage = "No roles found in database. Please add roles to the 'tbl_roles' table first.";
+
                 Console.WriteLine("No roles found in database. Make sure the 'tbl_roles' table has data.");
+
             }
+
             else
+
             {
+
                 Console.WriteLine($"Successfully loaded {availableRoles.Count} roles from database:");
+
                 foreach (var role in availableRoles)
+
                 {
+
                     Console.WriteLine($"  - Role ID: {role.role_id}, Name: {role.role_name}");
+
                 }
+
             }
-            
+
+
+
             StateHasChanged();
+
         }
+
         catch (Exception ex)
+
         {
+
             rolesErrorMessage = $"Error loading roles from database: {ex.Message}";
+
             errorMessage = $"Error loading roles: {ex.Message}";
+
             Console.WriteLine($"LoadRoles error: {ex}");
+
             availableRoles = new List<Role>();
+
             StateHasChanged();
+
         }
+
     }
 
     private string GetRoleName(int roleId)
+
     {
+
         var role = availableRoles.FirstOrDefault(r => r.role_id == roleId);
+
         return role?.role_name ?? "Unknown";
+
     }
 
     private IEnumerable<MauiApp2.Models.User> FilteredUsers
+
     {
+
         get
+
         {
+
             if (string.IsNullOrWhiteSpace(searchQuery))
+
                 return users;
 
             return users.Where(u =>
+
                 u.full_name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+
                 u.username.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+
                 u.email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+
                 GetRoleName(u.role_id).Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+
         }
+
     }
 
     private IEnumerable<MauiApp2.Models.User> PaginatedUsers
+
     {
+
         get
+
         {
+
             var filtered = FilteredUsers.ToList();
+
             return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+
         }
+
     }
 
     private void OnPageChanged(int page)
+
     {
+
         currentPage = page;
+
         StateHasChanged();
+
     }
 
     private void OnPageSizeChanged(int newPageSize)
+
     {
+
         pageSize = newPageSize;
+
         currentPage = 1;
+
         StateHasChanged();
+
     }
 
     private void OnSearchInput(ChangeEventArgs e)
+
     {
+
         searchQuery = e.Value?.ToString() ?? "";
+
         currentPage = 1;
+
     }
 
     private void OnNewStatusChanged(ChangeEventArgs e)
+
     {
+
         newIsActive = e.Value?.ToString()?.ToLower() == "true";
+
     }
 
     private void OnEditStatusChanged(ChangeEventArgs e)
+
     {
+
         editIsActive = e.Value?.ToString()?.ToLower() == "true";
+
     }
 
+
     // Modal Methods
+
     private async Task ShowAddModal()
+
     {
+
         // Reload roles from database if list is empty
+
         if (availableRoles == null || !availableRoles.Any())
+
         {
+
             await LoadRoles();
+
         }
-        
+
+
+
         showAddModal = true;
+
+        hasAttemptedSubmit = false; // Reset submit attempt flag
+
         ClearMessages();
+
+        ClearModalError();
+
         ResetAddForm();
+
         StateHasChanged();
+
     }
 
     private void CloseAddModal()
+
     {
+
         showAddModal = false;
+
+        hasAttemptedSubmit = false; // Reset submit attempt flag
+
         ResetAddForm();
+
+        ClearModalError();
+
+        isAddingUser = false;
+
         StateHasChanged();
+
     }
 
     private async Task ShowEditModal(MauiApp2.Models.User user)
+
     {
+
         // Reload roles from database if list is empty
+
         if (availableRoles == null || !availableRoles.Any())
+
         {
+
             await LoadRoles();
+
         }
-        
+
+
+
         editingUser = user;
+
         showEditModal = true;
+
         ClearMessages();
 
         // Populate edit form
+
         editFullName = user.full_name;
+
         editUsername = user.username;
+
         editEmail = user.email;
+
         editRoleId = user.role_id;
+
         editIsActive = user.is_active;
 
         StateHasChanged();
+
     }
 
     private void CloseEditModal()
+
     {
+
         showEditModal = false;
+
         editingUser = null;
+
         ResetEditForm();
+
         StateHasChanged();
+
     }
 
     // Form Methods
+
     private void ResetAddForm()
+
     {
+
         newFullName = "";
+
         newUsername = "";
+
         newEmail = "";
+
         newPassword = "";
+
         newRoleId = 0;
+
         newIsActive = true;
+
         validationErrors.Clear();
+
+        modalErrorMessage = "";
+
+        hasAttemptedSubmit = false; // Reset submit attempt flag
+
     }
 
     private void ResetEditForm()
+
     {
+
         editFullName = "";
+
         editUsername = "";
+
         editEmail = "";
+
         editRoleId = 0;
+
         editIsActive = true;
+
         editValidationErrors.Clear();
+
     }
 
     private void ClearMessages()
+
     {
+
         errorMessage = "";
+
         successMessage = "";
+
         validationErrors.Clear();
+
         editValidationErrors.Clear();
+
     }
 
     private void ClearErrorMessage() => errorMessage = "";
+
     private void ClearSuccessMessage() => successMessage = "";
 
+    private void ClearModalError() => modalErrorMessage = "";
+
     // Password validation
+
     private bool IsValidPassword(string password)
+
     {
+
         if (string.IsNullOrWhiteSpace(password))
+
             return false;
 
         if (password.Length < 12)
+
             return false;
 
         bool hasUpper = password.Any(char.IsUpper);
+
         bool hasNumber = password.Any(char.IsDigit);
+
         bool hasSpecial = password.Any(ch => !char.IsLetterOrDigit(ch));
 
         return hasUpper && hasNumber && hasSpecial;
+
     }
 
     // Email validation
+
     private bool IsValidEmail(string email)
+
     {
+
         try
+
         {
+
             var addr = new System.Net.Mail.MailAddress(email);
+
             return addr.Address == email;
+
         }
+
         catch
+
         {
+
             return false;
+
         }
+
     }
 
     // Validation Methods
+
     private void ValidateAddForm()
+
     {
+
         validationErrors.Clear();
 
         if (string.IsNullOrWhiteSpace(newFullName))
+
             AddValidationError("FullName", "Full name is required");
+
         else if (newFullName.Length < 2)
+
             AddValidationError("FullName", "Full name must be at least 2 characters long");
 
         if (string.IsNullOrWhiteSpace(newUsername))
+
             AddValidationError("Username", "Username is required");
+
         else if (newUsername.Length < 3)
+
             AddValidationError("Username", "Username must be at least 3 characters long");
+
         else if (users.Any(u => u.username.Equals(newUsername, StringComparison.OrdinalIgnoreCase)))
+
             AddValidationError("Username", "Username already exists");
 
         if (string.IsNullOrWhiteSpace(newEmail))
+
             AddValidationError("Email", "Email is required");
+
         else if (!IsValidEmail(newEmail))
+
             AddValidationError("Email", "Please enter a valid email address");
+
         else if (users.Any(u => u.email.Equals(newEmail, StringComparison.OrdinalIgnoreCase)))
+
             AddValidationError("Email", "Email already exists");
 
         if (string.IsNullOrWhiteSpace(newPassword))
+
             AddValidationError("Password", "Password is required");
+
         else if (!IsValidPassword(newPassword))
+
             AddValidationError("Password", "Password must be at least 12 characters with uppercase, number, and special character");
 
         if (newRoleId == 0)
+
             AddValidationError("Role", "Role is required");
+
     }
 
     private void ValidateEditForm()
+
     {
+
         editValidationErrors.Clear();
 
         if (string.IsNullOrWhiteSpace(editFullName))
+
             AddEditValidationError("FullName", "Full name is required");
+
         else if (editFullName.Length < 2)
+
             AddEditValidationError("FullName", "Full name must be at least 2 characters long");
 
         if (string.IsNullOrWhiteSpace(editUsername))
+
             AddEditValidationError("Username", "Username is required");
+
         else if (editUsername.Length < 3)
+
             AddEditValidationError("Username", "Username must be at least 3 characters long");
+
         else if (users.Any(u => u.username.Equals(editUsername, StringComparison.OrdinalIgnoreCase) && u.user_id != editingUser?.user_id))
+
             AddEditValidationError("Username", "Username already exists");
 
         if (string.IsNullOrWhiteSpace(editEmail))
+
             AddEditValidationError("Email", "Email is required");
+
         else if (!IsValidEmail(editEmail))
+
             AddEditValidationError("Email", "Please enter a valid email address");
+
         else if (users.Any(u => u.email.Equals(editEmail, StringComparison.OrdinalIgnoreCase) && u.user_id != editingUser?.user_id))
+
             AddEditValidationError("Email", "Email already exists");
 
         if (editRoleId == 0)
+
             AddEditValidationError("Role", "Role is required");
+
     }
 
     private void AddValidationError(string field, string message)
+
     {
-        validationErrors.Add($"{field}: {message}");
+
+        // Use a more reliable separator to avoid issues with colons in messages
+        validationErrors.Add($"{field}|{message}");
+
     }
 
     private void AddEditValidationError(string field, string message)
+
     {
-        editValidationErrors.Add($"{field}: {message}");
+
+        editValidationErrors.Add($"{field}|{message}");
+
     }
 
     private bool HasError(string field)
+
     {
-        return validationErrors.Any(error => error.StartsWith($"{field}:"));
+
+        return validationErrors.Any(error => error.StartsWith($"{field}|"));
+
     }
 
     private bool HasEditError(string field)
+
     {
-        return editValidationErrors.Any(error => error.StartsWith($"{field}:"));
+
+        return editValidationErrors.Any(error => error.StartsWith($"{field}|"));
+
     }
 
     private string GetError(string field)
+
     {
-        return validationErrors.FirstOrDefault(error => error.StartsWith($"{field}:"))?.Split(':')[1]?.Trim() ?? "";
+
+        var error = validationErrors.FirstOrDefault(error => error.StartsWith($"{field}|"));
+        if (string.IsNullOrEmpty(error))
+            return "";
+
+        var parts = error.Split('|', 2);
+        return parts.Length > 1 ? parts[1] : "";
+
     }
 
     private string GetEditError(string field)
+
     {
-        return editValidationErrors.FirstOrDefault(error => error.StartsWith($"{field}:"))?.Split(':')[1]?.Trim() ?? "";
+
+        var error = editValidationErrors.FirstOrDefault(error => error.StartsWith($"{field}|"));
+        if (string.IsNullOrEmpty(error))
+            return "";
+
+        var parts = error.Split('|', 2);
+        return parts.Length > 1 ? parts[1] : "";
+
     }
 
     private bool IsFormValid
+
     {
+
         get
+
         {
+
             ValidateAddForm();
+
             return validationErrors.Count == 0 &&
+
                    !string.IsNullOrWhiteSpace(newFullName) &&
+
                    !string.IsNullOrWhiteSpace(newUsername) &&
+
                    !string.IsNullOrWhiteSpace(newEmail) &&
+
                    IsValidEmail(newEmail) &&
+
                    !string.IsNullOrWhiteSpace(newPassword) &&
+
                    IsValidPassword(newPassword) &&
+
                    newRoleId > 0;
+
         }
+
     }
 
     private bool IsEditFormValid
+
     {
+
         get
+
         {
+
             ValidateEditForm();
+
             return editValidationErrors.Count == 0 &&
+
                    !string.IsNullOrWhiteSpace(editFullName) &&
+
                    !string.IsNullOrWhiteSpace(editUsername) &&
+
                    !string.IsNullOrWhiteSpace(editEmail) &&
+
                    IsValidEmail(editEmail) &&
+
                    editRoleId > 0;
+
         }
+
     }
 
-    // CRUD Operations
+    // CRUD Operations - IMPROVED ERROR HANDLING
+
     private async Task AddUser()
+
     {
+
+        // Prevent double submission
+
+        if (isAddingUser)
+
+            return;
+
+        // Mark that user has attempted to submit
+
+        hasAttemptedSubmit = true;
+
+        // Clear previous errors
+
+        ClearModalError();
+
+        validationErrors.Clear();
+
+        StateHasChanged();
+
+        // Validate form BEFORE attempting to add
+
         ValidateAddForm();
 
-        if (!IsFormValid)
+        if (validationErrors.Any())
+
         {
-            errorMessage = "Please fix the validation errors before submitting.";
-            return;
+
+            modalErrorMessage = "Please fix the validation errors before submitting.";
+
+            StateHasChanged();
+
+            return; // Stop here if validation fails
+
         }
 
-        try
+        // Check if roles are available
+
+        if (availableRoles == null || !availableRoles.Any())
+
         {
+
+            modalErrorMessage = "Cannot add user: No roles available. Please add roles to the database first.";
+
+            StateHasChanged();
+
+            return;
+
+        }
+
+        // Check if UserService is available
+
+        if (UserService == null)
+
+        {
+
+            modalErrorMessage = "Error: UserService is not available. Please check service registration.";
+
+            StateHasChanged();
+
+            return;
+
+        }
+
+        // Set loading state
+
+        isAddingUser = true;
+
+        StateHasChanged();
+
+        try
+
+        {
+
             var newUser = new MauiApp2.Models.User
+
             {
+
                 role_id = newRoleId,
+
                 username = newUsername.Trim(),
+
                 email = newEmail.Trim().ToLower(),
+
                 full_name = newFullName.Trim(),
+
                 is_active = newIsActive,
+
                 created_date = DateTime.Now
+
             };
 
             await UserService.CreateUserAsync(newUser, newPassword);
+
+            // Success - close modal and show success message
+
             successMessage = $"User '{newUser.full_name}' added successfully!";
 
             await LoadUsers();
+
             CloseAddModal();
+
+            // Clear search to show new user
+
+            searchQuery = "";
+
+            currentPage = 1;
+
             StateHasChanged();
+
         }
-        catch (Exception ex)
+
+        catch (ArgumentException ex)
+
         {
-            errorMessage = $"Error adding user: {ex.Message}";
+
+            // Handle validation errors from service
+
+            modalErrorMessage = $"Validation error: {ex.Message}";
+
             StateHasChanged();
+
         }
+
+        catch (InvalidOperationException ex)
+
+        {
+
+            // Handle business logic errors
+
+            modalErrorMessage = $"Cannot add user: {ex.Message}";
+
+            StateHasChanged();
+
+        }
+
+        catch (Exception ex)
+
+        {
+
+            // Handle unexpected errors
+
+            modalErrorMessage = $"Error adding user: {ex.Message}";
+
+            Console.WriteLine($"AddUser error: {ex}");
+
+            StateHasChanged();
+
+        }
+
+        finally
+
+        {
+
+            isAddingUser = false;
+
+            StateHasChanged();
+
+        }
+
     }
 
     private async Task UpdateUser()
+
     {
+
+        // Clear previous errors
+
+        errorMessage = "";
+
+        editValidationErrors.Clear();
+
+        StateHasChanged();
+
+        // Validate form BEFORE attempting to update
+
         ValidateEditForm();
 
-        if (!IsEditFormValid || editingUser == null)
+        if (editValidationErrors.Any())
+
         {
+
             errorMessage = "Please fix the validation errors before submitting.";
+
+            StateHasChanged();
+
+            return; // Stop here if validation fails
+
+        }
+
+        if (editingUser == null)
+
+        {
+
+            errorMessage = "Error: No user selected for editing.";
+
+            StateHasChanged();
+
             return;
+
+        }
+
+        // Check if roles are available
+
+        if (availableRoles == null || !availableRoles.Any())
+
+        {
+
+            errorMessage = "Cannot update user: No roles available. Please add roles to the database first.";
+
+            StateHasChanged();
+
+            return;
+
+        }
+
+        // Check if UserService is available
+
+        if (UserService == null)
+
+        {
+
+            errorMessage = "Error: UserService is not available. Please check service registration.";
+
+            StateHasChanged();
+
+            return;
+
         }
 
         try
+
         {
+
             editingUser.full_name = editFullName.Trim();
+
             editingUser.username = editUsername.Trim();
+
             editingUser.email = editEmail.Trim().ToLower();
+
             editingUser.role_id = editRoleId;
+
             editingUser.is_active = editIsActive;
 
             await UserService.UpdateUserAsync(editingUser);
+
+            // Success - close modal and show success message
+
             successMessage = $"User '{editingUser.full_name}' updated successfully!";
 
             await LoadUsers();
+
             CloseEditModal();
+
             StateHasChanged();
+
         }
-        catch (Exception ex)
+
+        catch (ArgumentException ex)
+
         {
-            errorMessage = $"Error updating user: {ex.Message}";
+
+            // Handle validation errors from service
+
+            errorMessage = $"Validation error: {ex.Message}";
+
             StateHasChanged();
+
         }
+
+        catch (InvalidOperationException ex)
+
+        {
+
+            // Handle business logic errors
+
+            errorMessage = $"Cannot update user: {ex.Message}";
+
+            StateHasChanged();
+
+        }
+
+        catch (Exception ex)
+
+        {
+
+            // Handle unexpected errors
+
+            errorMessage = $"Error updating user: {ex.Message}";
+
+            Console.WriteLine($"UpdateUser error: {ex}");
+
+            StateHasChanged();
+
+        }
+
     }
 
     private async Task Logout()
+
     {
+
         await AuthService.LogoutAsync();
+
         Navigation.NavigateTo("/login");
+
     }
+
 }
 

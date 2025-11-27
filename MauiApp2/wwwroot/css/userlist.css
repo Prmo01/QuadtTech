@@ -1,5 +1,4 @@
-﻿
-.dashboard-wrapper {
+﻿.dashboard-wrapper {
     display: flex;
     height: 100vh;
     background-color: #f5f7fa;
@@ -472,4 +471,191 @@
     }
 }
 
+/* Pagination Styles - Enhanced and Corrected */
+.pagination-container,
+.pagination-wrapper {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 30px;
+    border-top: 1px solid #e5e7eb;
+    background-color: #ffffff;
+    flex-wrap: wrap;
+    gap: 20px;
+}
 
+/* Left: Entries Info */
+.pagination-info {
+    font-size: 14px;
+    color: #6b7280;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+/* Center: Page Navigation Controls */
+.pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+    justify-content: center;
+    flex: 1;
+}
+
+.pagination-btn {
+    min-width: 36px;
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    margin: 0;
+    border: 1px solid #d1d5db;
+    border-radius: 0;
+    background-color: #ffffff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+    box-sizing: border-box;
+}
+
+    /* Connect buttons seamlessly */
+    .pagination-btn:not(:first-child) {
+        margin-left: -1px;
+    }
+
+    .pagination-btn:hover:not(:disabled):not(.active) {
+        background-color: #f9fafb;
+        border-color: #9ca3af;
+        color: #111827;
+        z-index: 1;
+        position: relative;
+    }
+
+    .pagination-btn:active:not(:disabled):not(.active) {
+        background-color: #f3f4f6;
+        transform: translateY(1px);
+    }
+
+    .pagination-btn:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+        background-color: #f9fafb;
+        color: #9ca3af;
+        transform: none;
+    }
+
+    .pagination-btn.active {
+        background-color: #2563eb;
+        border-color: #2563eb;
+        color: #ffffff;
+        font-weight: 600;
+        box-shadow: 0 2px 4px rgba(37, 99, 235, 0.2);
+        z-index: 2;
+        position: relative;
+    }
+
+        .pagination-btn.active:hover {
+            background-color: #1d4ed8;
+            border-color: #1d4ed8;
+        }
+
+/* Right: Items per page - Support both class names */
+.pagination-per-page,
+.pagination-size {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    white-space: nowrap;
+}
+
+    .per-page-label,
+    .pagination-size label {
+        font-size: 14px;
+        color: #6b7280;
+        font-weight: 500;
+    }
+
+.per-page-select,
+.pagination-select {
+    padding: 6px 32px 6px 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    background-color: #ffffff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    outline: none;
+    transition: all 0.2s ease;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%236b7280' d='M6 9L1 4h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    background-size: 12px;
+    min-width: 70px;
+}
+
+    .per-page-select:hover,
+    .pagination-select:hover {
+        border-color: #9ca3af;
+        background-color: #fafbfc;
+    }
+
+    .per-page-select:focus,
+    .pagination-select:focus {
+        border-color: #2563eb;
+        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        background-color: #ffffff;
+    }
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .pagination-container,
+    .pagination-wrapper {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 16px 20px;
+    }
+
+    .pagination-info {
+        text-align: center;
+        width: 100%;
+    }
+
+    .pagination-controls {
+        justify-content: center;
+        width: 100%;
+    }
+
+    .pagination-per-page,
+    .pagination-size {
+        justify-content: center;
+        width: 100%;
+    }
+}
+
+@media (max-width: 480px) {
+    .pagination-btn {
+        min-width: 32px;
+        width: 32px;
+        height: 32px;
+        font-size: 13px;
+    }
+
+    .pagination-info {
+        font-size: 13px;
+    }
+
+    .per-page-label,
+    .per-page-select,
+    .pagination-size label,
+    .pagination-select {
+        font-size: 13px;
+    }
+}
