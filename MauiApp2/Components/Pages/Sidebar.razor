@@ -48,7 +48,7 @@
         @if (CanAccessInventory())
         {
             <div class="nav-section">
-                <div class="nav-item nav-section-header @GetNavItemClass("/products", "/purchase-orders", "/stockadjustment", "/categories", "/brands", "/transaction")" @onclick="ToggleInventoryMenu">
+                <div class="nav-item nav-section-header @GetNavItemClass("/products", "/purchase-orders", "/stockadjustment", "/categories", "/brands", "/taxes", "/suppliers", "/transaction")" @onclick="ToggleInventoryMenu">
                     <span class="nav-icon"><i class="fas fa-boxes"></i></span>
                     <span class="nav-text">Inventory Management</span>
                     <span class="nav-arrow">
@@ -77,6 +77,14 @@
                         <a href="/brands" class="nav-subitem @GetNavItemClass("/brands")">
                             <span class="nav-subicon"><i class="fas fa-copyright"></i></span>
                             <span class="nav-subtext">Brand</span>
+                        </a>
+                        <a href="/taxes" class="nav-subitem @GetNavItemClass("/taxes")">
+                            <span class="nav-subicon"><i class="fas fa-percent"></i></span>
+                            <span class="nav-subtext">Tax</span>
+                        </a>
+                        <a href="/suppliers" class="nav-subitem @GetNavItemClass("/suppliers")">
+                            <span class="nav-subicon"><i class="fas fa-truck"></i></span>
+                            <span class="nav-subtext">Supplier</span>
                         </a>
                         <a href="/transaction" class="nav-subitem @GetNavItemClass("/transaction")">
                             <span class="nav-subicon"><i class="fas fa-receipt"></i></span>
@@ -176,6 +184,8 @@
                 currentUri.Contains("/stockadjustment") ||
                 currentUri.Contains("/categories") ||
                 currentUri.Contains("/brands") ||
+                currentUri.Contains("/taxes") ||
+                currentUri.Contains("/suppliers") ||
                 currentUri.Contains("/transaction"))
             {
                 isInventoryMenuOpen = true;

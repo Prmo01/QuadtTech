@@ -67,6 +67,9 @@ namespace MauiApp2.Services
                     // Verify password
                     if (VerifyPassword(password, passwordHash))
                     {
+                        // Update last_login timestamp
+                        await UpdateLastLoginAsync(userId);
+                        
                         IsAuthenticated = true;
                         CurrentUser = username.Trim();
                         CurrentUserId = userId;
@@ -128,6 +131,31 @@ namespace MauiApp2.Services
             string hashOfInput = HashPassword(password);
             StringComparer comparer = StringComparer.OrdinalIgnoreCase;
             return comparer.Compare(hashOfInput, hash) == 0;
+        }
+
+        // Update last login timestamp
+        private async Task UpdateLastLoginAsync(int userId)
+        {
+            try
+            {
+                using var connection = db.GetConnection();
+                await connection.OpenAsync();
+
+                var updateCommand = new SqlCommand(@"
+                    UPDATE tbl_users 
+                    SET last_login = @last_login 
+                    WHERE user_id = @user_id", connection);
+
+                updateCommand.Parameters.AddWithValue("@user_id", userId);
+                updateCommand.Parameters.AddWithValue("@last_login", DateTime.Now);
+
+                await updateCommand.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the login if last_login update fails
+                Console.WriteLine($"Error updating last_login: {ex.Message}");
+            }
         }
     }
 }

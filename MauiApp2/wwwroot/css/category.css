@@ -8,14 +8,18 @@
 
 .dashboard-wrapper {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f8fafc;
+    overflow: hidden;
 }
 
 .main-content {
     flex: 1;
     padding: 24px;
     margin-left: 280px;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 .content-header h1 {

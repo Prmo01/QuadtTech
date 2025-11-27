@@ -13,6 +13,7 @@ namespace MauiApp2.Models
         public int product_id { get; set; }
         public int? brand_id { get; set; }
         public int? category_id { get; set; }
+        public int? tax_id { get; set; }
         public string product_name { get; set; } = string.Empty;
         public string product_sku { get; set; } = string.Empty;
         public string? model_number { get; set; }

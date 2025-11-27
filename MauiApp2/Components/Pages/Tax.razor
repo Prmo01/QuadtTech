@@ -1,0 +1,744 @@
+@page "/taxes"
+@layout MainLayout
+@using MauiApp2.Services
+@using MauiApp2.Models
+@using TaxModel = MauiApp2.Models.Tax
+@using Microsoft.JSInterop
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ITaxService TaxService
+@inject IJSRuntime JSRuntime
+
+<link href="css/tax.css" rel="stylesheet" />
+<link href="css/pagination.css" rel="stylesheet" />
+
+<div class="dashboard-wrapper">
+    <Sidebar />
+
+    <div class="main-content">
+        <div class="content-header">
+            <h1>Tax Management</h1>
+        </div>
+
+        <div class="tax-management">
+            <div class="tab-section">
+                <div class="tabs">
+                    <button class="tab active">Tax List</button>
+                </div>
+            </div>
+
+            <div class="tax-table-container">
+                <!-- Alert Messages -->
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-error">
+                        <span class="alert-icon">⚠️</span>
+                        <span>@errorMessage</span>
+                        <button class="alert-close" @onclick="ClearErrorMessage">×</button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✅</span>
+                        <span>@successMessage</span>
+                        <button class="alert-close" @onclick="ClearSuccessMessage">×</button>
+                    </div>
+                }
+
+                <!-- Loading Indicator -->
+                @if (isLoading)
+                {
+                    <div class="loading-indicator">
+                        <div class="spinner"></div>
+                        <span>Loading taxes...</span>
+                    </div>
+                }
+
+                <div class="tax-toolbar">
+                    <button class="add-tax-btn" @onclick="ShowAddModal" disabled="@isLoading">
+                        Add Tax
+                    </button>
+
+                    <div class="tax-search-container">
+                        <input type="text"
+                               class="tax-search-input"
+                               placeholder="Search taxes..."
+                               value="@searchQuery"
+                               @oninput="OnSearchInput"
+                               disabled="@isLoading" />
+                        <span class="tax-search-icon">🔎︎</span>
+                    </div>
+                </div>
+
+                <table class="tax-table">
+                    <thead>
+                        <tr>
+                            <th>Tax ID</th>
+                            <th>Tax Name</th>
+                            <th>Tax Type</th>
+                            <th>Tax Rate (%)</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (PaginatedTaxes.Any())
+                        {
+                            @foreach (var tax in PaginatedTaxes)
+                            {
+                                <tr>
+                                    <td>@tax.tax_id</td>
+                                    <td>@tax.tax_name</td>
+                                    <td>@tax.tax_type</td>
+                                    <td>@((tax.tax_rate * 100).ToString("N2"))%</td>
+                                    <td>
+                                        <span class="status-badge @(tax.is_active ? "active" : "inactive")">
+                                            @(tax.is_active ? "Active" : "Inactive")
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="tax-edit-btn" 
+                                                @onclick="() => ShowEditModal(tax)"
+                                                disabled="@isLoading">
+                                            Edit
+                                        </button>
+                                        <button class="tax-delete-btn" 
+                                                @onclick="() => DeleteTax(tax.tax_id)"
+                                                disabled="@isLoading"> 
+                                            Delete
+                                        </button>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else if (!isLoading)
+                        {
+                            <tr>
+                                <td colspan="6" style="text-align: center; padding: 40px; color: #6b7280;">
+                                    @if (string.IsNullOrWhiteSpace(searchQuery))
+                                    {
+                                        <span>No taxes found. Click "Add Tax" to add your first tax.</span>
+                                    }
+                                    else
+                                    {
+                                        <span>No taxes match your search criteria.</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                <!-- Pagination -->
+                @if (FilteredTaxes.Any())
+                {
+                    <Pagination CurrentPage="@currentPage"
+                                PageSize="@pageSize"
+                                TotalItems="@FilteredTaxes.Count()"
+                                PageChanged="@OnPageChanged"
+                                PageSizeChanged="@OnPageSizeChanged" />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add Tax Modal -->
+@if (showAddModal)
+{
+    <div class="tax-modal-overlay" @onclick="CloseAddModal">
+        <div class="tax-modal-content" @onclick:stopPropagation="true">
+            <div class="tax-modal-header">
+                <h3>Add New Tax</h3>
+                <button class="tax-modal-close" @onclick="CloseAddModal">×</button>
+            </div>
+            <div class="tax-modal-body">
+                <!-- Validation Summary -->
+                @if (validationErrors?.Any() == true)
+                {
+                    <div class="validation-summary">
+                        <h4>Please fix the following errors:</h4>
+                        <ul>
+                            @foreach (var error in validationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="tax-form-container">
+                    <div class="tax-form-group">
+                        <label>Tax Name *</label>
+                        <input type="text"
+                               class="tax-form-control @(HasError("TaxName") ? "input-error" : "")"
+                               @bind="newTaxName"
+                               placeholder="Enter tax name (e.g., VAT)"
+                               maxlength="100"
+                               disabled="@isLoading" />
+                        @if (HasError("TaxName"))
+                        {
+                            <span class="tax-field-error">@GetError("TaxName")</span>
+                        }
+                    </div>
+
+                    <div class="tax-form-group">
+                        <label>Tax Type *</label>
+                        <select class="tax-form-control @(HasError("TaxType") ? "input-error" : "")"
+                                @bind="newTaxType"
+                                disabled="@isLoading">
+                            <option value="">Select Tax Type</option>
+                            <option value="VAT">VAT (Value Added Tax)</option>
+                            <option value="Zero Rated">Zero Rated</option>
+                            <option value="Exempt">Exempt</option>
+                        </select>
+                        @if (HasError("TaxType"))
+                        {
+                            <span class="tax-field-error">@GetError("TaxType")</span>
+                        }
+                        <small class="tax-help-text">Select the tax type applicable in the Philippines</small>
+                    </div>
+
+                    <div class="tax-form-group">
+                        <label>Tax Rate (%) *</label>
+                        <input type="number"
+                               class="tax-form-control @(HasError("TaxRate") ? "input-error" : "")"
+                               @bind="newTaxRatePercent"
+                               @bind:event="oninput"
+                               step="0.01"
+                               min="0"
+                               max="100"
+                               placeholder="Enter tax rate (e.g., 12 for 12%)"
+                               disabled="@isLoading" />
+                        @if (HasError("TaxRate"))
+                        {
+                            <span class="tax-field-error">@GetError("TaxRate")</span>
+                        }
+                        <small class="tax-help-text">Enter percentage (e.g., 12 for 12% VAT in Philippines)</small>
+                    </div>
+
+                    <div class="tax-form-group">
+                        <label>Status</label>
+                        <select class="tax-form-control"
+                                value="@(newIsActive.ToString().ToLower())"
+                                @onchange="OnNewStatusChanged"
+                                disabled="@isLoading">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="tax-modal-footer">
+                <button class="tax-btn-cancel" @onclick="CloseAddModal" disabled="@isLoading">Cancel</button>
+                <button class="tax-btn-submit" @onclick="AddTax" disabled="@(!IsFormValid || isLoading)">
+                    @if (isLoading)
+                    {
+                        <span class="button-spinner"></span>
+                    }
+                    Add Tax
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Edit Tax Modal -->
+@if (showEditModal && editingTax != null)
+{
+    <div class="tax-modal-overlay" @onclick="CloseEditModal">
+        <div class="tax-modal-content" @onclick:stopPropagation="true">
+            <div class="tax-modal-header">
+                <h3>Edit Tax</h3>
+                <button class="tax-modal-close" @onclick="CloseEditModal">×</button>
+            </div>
+            <div class="tax-modal-body">
+                <!-- Validation Summary -->
+                @if (editValidationErrors?.Any() == true)
+                {
+                    <div class="validation-summary">
+                        <h4>Please fix the following errors:</h4>
+                        <ul>
+                            @foreach (var error in editValidationErrors)
+                            {
+                                <li>@error</li>
+                            }
+                        </ul>
+                    </div>
+                }
+
+                <div class="tax-form-container">
+                    <div class="tax-form-group">
+                        <label>Tax Name *</label>
+                        <input type="text"
+                               class="tax-form-control @(HasEditError("TaxName") ? "input-error" : "")"
+                               @bind="editTaxName"
+                               placeholder="Enter tax name (e.g., VAT)"
+                               maxlength="100"
+                               disabled="@isLoading" />
+                        @if (HasEditError("TaxName"))
+                        {
+                            <span class="tax-field-error">@GetEditError("TaxName")</span>
+                        }
+                    </div>
+
+                    <div class="tax-form-group">
+                        <label>Tax Type *</label>
+                        <select class="tax-form-control @(HasEditError("TaxType") ? "input-error" : "")"
+                                @bind="editTaxType"
+                                disabled="@isLoading">
+                            <option value="">Select Tax Type</option>
+                            <option value="VAT">VAT (Value Added Tax)</option>
+                            <option value="Zero Rated">Zero Rated</option>
+                            <option value="Exempt">Exempt</option>
+                        </select>
+                        @if (HasEditError("TaxType"))
+                        {
+                            <span class="tax-field-error">@GetEditError("TaxType")</span>
+                        }
+                        <small class="tax-help-text">Select the tax type applicable in the Philippines</small>
+                    </div>
+
+                    <div class="tax-form-group">
+                        <label>Tax Rate (%) *</label>
+                        <input type="number"
+                               class="tax-form-control @(HasEditError("TaxRate") ? "input-error" : "")"
+                               @bind="editTaxRatePercent"
+                               @bind:event="oninput"
+                               step="0.01"
+                               min="0"
+                               max="100"
+                               placeholder="Enter tax rate (e.g., 12 for 12%)"
+                               disabled="@isLoading" />
+                        @if (HasEditError("TaxRate"))
+                        {
+                            <span class="tax-field-error">@GetEditError("TaxRate")</span>
+                        }
+                        <small class="tax-help-text">Enter percentage (e.g., 12 for 12% VAT in Philippines)</small>
+                    </div>
+
+                    <div class="tax-form-group">
+                        <label>Status</label>
+                        <select class="tax-form-control"
+                                value="@(editIsActive.ToString().ToLower())"
+                                @onchange="OnEditStatusChanged"
+                                disabled="@isLoading">
+                            <option value="true">Active</option>
+                            <option value="false">Inactive</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="tax-modal-footer">
+                <button class="tax-btn-cancel" @onclick="CloseEditModal" disabled="@isLoading">Cancel</button>
+                <button class="tax-btn-submit" @onclick="UpdateTax" disabled="@(!IsEditFormValid || isLoading)">
+                    @if (isLoading)
+                    {
+                        <span class="button-spinner"></span>
+                    }
+                    Update Tax
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private string searchQuery = "";
+    private List<TaxModel> taxes = new();
+    private bool showAddModal = false;
+    private bool showEditModal = false;
+    private TaxModel? editingTax = null;
+    private bool isLoading = false;
+
+    // Add form fields
+    private string newTaxName = "";
+    private string newTaxType = "";
+    private decimal newTaxRatePercent = 0;
+    private bool newIsActive = true;
+
+    // Edit form fields
+    private string editTaxName = "";
+    private string editTaxType = "";
+    private decimal editTaxRatePercent = 0;
+    private bool editIsActive = true;
+
+    // Messages and validation
+    private string errorMessage = "";
+    private string successMessage = "";
+    private List<string> validationErrors = new List<string>();
+    private List<string> editValidationErrors = new List<string>();
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTaxes();
+    }
+
+    private async Task LoadTaxes()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = "";
+            StateHasChanged();
+
+            taxes = await TaxService.GetTaxesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading taxes: {ex.Message}";
+            Console.WriteLine($"Error: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<TaxModel> FilteredTaxes
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(searchQuery))
+                return taxes;
+
+            return taxes.Where(t =>
+                t.tax_name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                t.tax_type.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                t.tax_id.ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+                (t.tax_rate * 100).ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private IEnumerable<TaxModel> PaginatedTaxes
+    {
+        get
+        {
+            var filtered = FilteredTaxes.ToList();
+            return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        currentPage = 1;
+    }
+
+    private void OnNewStatusChanged(ChangeEventArgs e)
+    {
+        newIsActive = e.Value?.ToString()?.ToLower() == "true";
+    }
+
+    private void OnEditStatusChanged(ChangeEventArgs e)
+    {
+        editIsActive = e.Value?.ToString()?.ToLower() == "true";
+    }
+
+    // Modal Methods
+    private void ShowAddModal()
+    {
+        showAddModal = true;
+        ClearMessages();
+        ResetAddForm();
+        StateHasChanged();
+    }
+
+    private void CloseAddModal()
+    {
+        showAddModal = false;
+        ResetAddForm();
+        StateHasChanged();
+    }
+
+    private void ShowEditModal(TaxModel tax)
+    {
+        editingTax = tax;
+        showEditModal = true;
+        ClearMessages();
+
+        // Populate edit form
+        editTaxName = tax.tax_name;
+        editTaxType = tax.tax_type;
+        editTaxRatePercent = tax.tax_rate * 100; // Convert from decimal (0.12) to percentage (12)
+        editIsActive = tax.is_active;
+
+        StateHasChanged();
+    }
+
+    private void CloseEditModal()
+    {
+        showEditModal = false;
+        editingTax = null;
+        ResetEditForm();
+        StateHasChanged();
+    }
+
+    // Form Methods
+    private void ResetAddForm()
+    {
+        newTaxName = "";
+        newTaxType = "";
+        newTaxRatePercent = 0;
+        newIsActive = true;
+        validationErrors.Clear();
+    }
+
+    private void ResetEditForm()
+    {
+        editTaxName = "";
+        editTaxType = "";
+        editTaxRatePercent = 0;
+        editIsActive = true;
+        editValidationErrors.Clear();
+    }
+
+    private void ClearMessages()
+    {
+        errorMessage = "";
+        successMessage = "";
+        validationErrors.Clear();
+        editValidationErrors.Clear();
+    }
+
+    private void ClearErrorMessage() => errorMessage = "";
+    private void ClearSuccessMessage() => successMessage = "";
+
+    // Validation Methods
+    private void ValidateAddForm()
+    {
+        validationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(newTaxName))
+            AddValidationError("TaxName", "Tax name is required");
+        else if (newTaxName.Length < 2)
+            AddValidationError("TaxName", "Tax name must be at least 2 characters long");
+        else if (taxes.Any(t => t.tax_name.Equals(newTaxName, StringComparison.OrdinalIgnoreCase)))
+            AddValidationError("TaxName", "Tax name already exists");
+
+        if (string.IsNullOrWhiteSpace(newTaxType))
+            AddValidationError("TaxType", "Tax type is required");
+
+        if (newTaxRatePercent < 0)
+            AddValidationError("TaxRate", "Tax rate cannot be negative");
+        else if (newTaxRatePercent > 100)
+            AddValidationError("TaxRate", "Tax rate cannot exceed 100%");
+    }
+
+    private void ValidateEditForm()
+    {
+        editValidationErrors.Clear();
+
+        if (string.IsNullOrWhiteSpace(editTaxName))
+            AddEditValidationError("TaxName", "Tax name is required");
+        else if (editTaxName.Length < 2)
+            AddEditValidationError("TaxName", "Tax name must be at least 2 characters long");
+        else if (taxes.Any(t => t.tax_name.Equals(editTaxName, StringComparison.OrdinalIgnoreCase) && t.tax_id != editingTax?.tax_id))
+            AddEditValidationError("TaxName", "Tax name already exists");
+
+        if (string.IsNullOrWhiteSpace(editTaxType))
+            AddEditValidationError("TaxType", "Tax type is required");
+
+        if (editTaxRatePercent < 0)
+            AddEditValidationError("TaxRate", "Tax rate cannot be negative");
+        else if (editTaxRatePercent > 100)
+            AddEditValidationError("TaxRate", "Tax rate cannot exceed 100%");
+    }
+
+    private void AddValidationError(string field, string message)
+    {
+        validationErrors.Add($"{field}: {message}");
+    }
+
+    private void AddEditValidationError(string field, string message)
+    {
+        editValidationErrors.Add($"{field}: {message}");
+    }
+
+    private bool HasError(string field)
+    {
+        return validationErrors.Any(error => error.StartsWith($"{field}:"));
+    }
+
+    private bool HasEditError(string field)
+    {
+        return editValidationErrors.Any(error => error.StartsWith($"{field}:"));
+    }
+
+    private string GetError(string field)
+    {
+        return validationErrors.FirstOrDefault(error => error.StartsWith($"{field}:"))?.Split(':')[1]?.Trim() ?? "";
+    }
+
+    private string GetEditError(string field)
+    {
+        return editValidationErrors.FirstOrDefault(error => error.StartsWith($"{field}:"))?.Split(':')[1]?.Trim() ?? "";
+    }
+
+    private bool IsFormValid
+    {
+        get
+        {
+            ValidateAddForm();
+            return validationErrors.Count == 0 && !string.IsNullOrWhiteSpace(newTaxName) && !string.IsNullOrWhiteSpace(newTaxType);
+        }
+    }
+
+    private bool IsEditFormValid
+    {
+        get
+        {
+            ValidateEditForm();
+            return editValidationErrors.Count == 0 && !string.IsNullOrWhiteSpace(editTaxName) && !string.IsNullOrWhiteSpace(editTaxType);
+        }
+    }
+
+    // CRUD Operations
+    private async Task AddTax()
+    {
+        ValidateAddForm();
+
+        if (!IsFormValid)
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            var newTax = new TaxModel
+            {
+                tax_name = newTaxName.Trim(),
+                tax_type = newTaxType.Trim(),
+                tax_rate = newTaxRatePercent / 100, // Convert percentage (12) to decimal (0.12)
+                is_active = newIsActive,
+                created_date = DateTime.Now
+            };
+
+            var taxId = await TaxService.CreateTaxAsync(newTax);
+            
+            successMessage = $"Tax '{newTaxName}' added successfully!";
+            
+            await LoadTaxes(); // Refresh the list
+            CloseAddModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error adding tax: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UpdateTax()
+    {
+        ValidateEditForm();
+
+        if (!IsEditFormValid || editingTax == null)
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            var updatedTax = new TaxModel
+            {
+                tax_id = editingTax.tax_id,
+                tax_name = editTaxName.Trim(),
+                tax_type = editTaxType.Trim(),
+                tax_rate = editTaxRatePercent / 100, // Convert percentage (12) to decimal (0.12)
+                is_active = editIsActive,
+                created_date = editingTax.created_date
+            };
+
+            var success = await TaxService.UpdateTaxAsync(updatedTax);
+            
+            if (success)
+            {
+                successMessage = $"Tax '{editTaxName}' updated successfully!";
+                await LoadTaxes(); // Refresh the list
+                CloseEditModal();
+            }
+            else
+            {
+                errorMessage = "Failed to update tax. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error updating tax: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task DeleteTax(int taxId)
+    {
+        var taxToDelete = taxes.FirstOrDefault(t => t.tax_id == taxId);
+        if (taxToDelete == null) return;
+
+        if (!await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to delete tax '{taxToDelete.tax_name}'?"))
+            return;
+
+        try
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            var success = await TaxService.DeleteTaxAsync(taxId);
+            
+            if (success)
+            {
+                successMessage = $"Tax '{taxToDelete.tax_name}' deleted successfully!";
+                await LoadTaxes(); // Refresh the list
+            }
+            else
+            {
+                errorMessage = "Failed to delete tax. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error deleting tax: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+}
+

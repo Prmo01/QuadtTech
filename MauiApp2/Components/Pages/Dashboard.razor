@@ -2,6 +2,7 @@
 @layout MainLayout
 @using MauiApp2.Services
 @inject IAuthService AuthService
+@inject IUserService UserService
 @inject NavigationManager Navigation
 
 <link href="css/dashboard.css" rel="stylesheet" />
@@ -24,7 +25,7 @@
                                 <i class="fas fa-users"></i>
                             </div>
                         </div>
-                        <div class="stat-value">30,689</div>
+                        <div class="stat-value">@totalUsers.ToString("N0")</div>
                         <div class="">
                         </div>
                     </div>
@@ -35,7 +36,7 @@
                                 <i class="fas fa-shopping-cart"></i>
                             </div>
                         </div>
-                        <div class="stat-value">10,293</div>
+                        <div class="stat-value">@totalOrders.ToString("N0")</div>
                         <div class="">
                         </div>
                     </div>
@@ -46,7 +47,7 @@
                                 <i class="fas fa-chart-bar"></i>
                             </div>
                         </div>
-                        <div class="stat-value">₱30,000</div>
+                        <div class="stat-value">₱@totalSales.ToString("N2")</div>
                         <div class="">
                         </div>
                     </div>
@@ -57,7 +58,7 @@
                                 <i class="fas fa-clock"></i>
                             </div>
                         </div>
-                        <div class="stat-value">2,040</div>
+                        <div class="stat-value">@pendingOrders.ToString("N0")</div>
                         <div class="">
                         </div>
                     </div>
@@ -92,19 +93,19 @@
                     </div>
                     <div class="chart-metrics">
                         <div class="metric-card">
-                            <div class="metric-value">₱125,430</div>
+                            <div class="metric-value">₱@totalRevenue.ToString("N2")</div>
                             <div class="metric-label">Total Revenue</div>
                             <div class="metric-trend positive">
                             </div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-value">₱98,760</div>
+                            <div class="metric-value">₱@averageMonthly.ToString("N2")</div>
                             <div class="metric-label">Average Monthly</div>
                             <div class="metric-trend positive">
                             </div>
                         </div>
                         <div class="metric-card">
-                            <div class="metric-value">1,247</div>
+                            <div class="metric-value">@totalTransactions.ToString("N0")</div>
                             <div class="metric-label">Transactions</div>
                             <div class="metric-trend positive">
                             </div>
@@ -186,11 +187,53 @@
 </div>
 
 @code {
-    protected override void OnInitialized()
+    // Statistics data (loaded from database)
+    private int totalUsers = 0;
+    private int totalOrders = 0;
+    private decimal totalSales = 0;
+    private int pendingOrders = 0;
+    private decimal totalRevenue = 0;
+    private decimal averageMonthly = 0;
+    private int totalTransactions = 0;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
     {
         if (!AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("/");
+            return;
+        }
+
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        isLoading = true;
+        try
+        {
+            // Load total users count
+            var users = await UserService.GetUsersAsync();
+            totalUsers = users.Count;
+
+            // TODO: Load other statistics from database when services are implemented
+            // For now, set to 0 since we don't have order/sales services yet
+            totalOrders = 0;
+            totalSales = 0;
+            pendingOrders = 0;
+            totalRevenue = 0;
+            averageMonthly = 0;
+            totalTransactions = 0;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading dashboard data: {ex.Message}");
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
         }
     }
 }

@@ -1,8 +1,9 @@
 ﻿/* Stock Out Page - Matching Sidebar Design */
 .dashboard-wrapper {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f8fafc;
+    overflow: hidden;
 }
 
 .main-content {
@@ -10,7 +11,9 @@
     margin-left: 280px;
     padding: 32px;
     background-color: #f8fafc;
-    min-height: 100vh;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
 }
 
 /* Content Header */

@@ -5,6 +5,7 @@
 @inject NavigationManager Navigation
 
 <link href="css/stockadjustment.css" rel="stylesheet" />
+<link href="css/pagination.css" rel="stylesheet" />
 
 <div class="dashboard-wrapper">
     <Sidebar />
@@ -57,7 +58,7 @@
                         <input type="date" class="form-control date-input" @bind="filterDate" />
                     </div>
                     <div class="search-control">
-                        <input type="text" class="form-control search-input" placeholder="Enter product name or id" @bind="searchTerm" />
+                        <input type="text" class="form-control search-input" placeholder="Enter product name or id" value="@searchTerm" @oninput="OnSearchInput" />
                         <button class="btn-search" @onclick="SearchAdjustmentHistory">
                             <i class="fas fa-search"></i>
                         </button>
@@ -91,9 +92,9 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @if (FilteredAdjustments?.Any() == true)
+                            @if (PaginatedAdjustments?.Any() == true)
                             {
-                                @foreach (var record in FilteredAdjustments)
+                                @foreach (var record in PaginatedAdjustments)
                                 {
                                     <tr>
                                         <td>@record.ProductId</td>
@@ -160,6 +161,16 @@
                         </tbody>
                     </table>
                 </div>
+
+                <!-- Pagination -->
+                @if (FilteredAdjustments.Any())
+                {
+                    <Pagination CurrentPage="@currentPage"
+                                PageSize="@pageSize"
+                                TotalItems="@FilteredAdjustments.Count()"
+                                PageChanged="@OnPageChanged"
+                                PageSizeChanged="@OnPageSizeChanged" />
+                }
             </div>
         </div>
     </main>
@@ -343,12 +354,12 @@
     private string searchTerm = "";
     private string adjustmentTypeFilter = "";
 
-    // Sample data
-    private List<Product> products = new List<Product>
-    {
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
 
-    };
-
+    // Data collections (loaded from database)
+    private List<Product> products = new List<Product>();
     private List<AdjustmentRecord> adjustmentHistory = new List<AdjustmentRecord>();
 
     protected override void OnInitialized()
@@ -356,28 +367,9 @@
         if (!AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("/");
+            return;
         }
-        LoadSampleData();
-    }
-
-    private void LoadSampleData()
-    {
-        // Sample adjustment history
-        adjustmentHistory = new List<AdjustmentRecord>
-        {
-            new AdjustmentRecord
-            {
-               
-            },
-            new AdjustmentRecord
-            {
-                
-            },
-            new AdjustmentRecord
-            {
-               
-            }
-        };
+        // Data will be loaded from database when services are implemented
     }
 
     private IEnumerable<AdjustmentRecord> FilteredAdjustments
@@ -410,6 +402,34 @@
 
             return filtered.OrderByDescending(a => a.AdjustmentDate);
         }
+    }
+
+    private IEnumerable<AdjustmentRecord> PaginatedAdjustments
+    {
+        get
+        {
+            var filtered = FilteredAdjustments.ToList();
+            return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        currentPage = 1;
     }
 
     private void ToggleInventoryMenu()

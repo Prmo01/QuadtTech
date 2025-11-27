@@ -6,7 +6,10 @@
 @inject IProductService ProductService
 @inject ICategoryService CategoryService
 @inject IBrandService BrandService
+@inject ITaxService TaxService
 @inject NavigationManager Navigation
+
+<link href="css/pagination.css" rel="stylesheet" />
 
 <div class="dashboard-wrapper">
     <Sidebar />
@@ -52,8 +55,8 @@
                         <input type="text"
                                class="search-input"
                                placeholder="Enter product name, SKU, or Model Number"
-                               @bind="searchQuery"
-                               @bind:event="oninput" />
+                               value="@searchQuery"
+                               @oninput="OnSearchInput" />
                         <span class="search-icon">🔎︎</span>
                     </div>
                 </div>
@@ -64,6 +67,7 @@
                             <th>Product Name</th>
                             <th>Category</th>
                             <th>Brand</th>
+                            <th>Tax</th>
                             <th>SKU</th>
                             <th>Model Name</th>
                             <th>Cost Price</th>
@@ -74,14 +78,15 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (FilteredProducts.Any())
+                        @if (PaginatedProducts.Any())
                         {
-                            @foreach (var product in FilteredProducts)
+                            @foreach (var product in PaginatedProducts)
                             {
                                 <tr>
                                     <td>@product.ProductName</td>
                                     <td>@product.Category</td>
                                     <td>@product.Brand</td>
+                                    <td>@product.Tax</td>
                                     <td>@product.SKU</td>
                                     <td>@product.ModelNumber</td>
                                     <td>₱@product.CostPrice.ToString("N2")</td>
@@ -101,7 +106,7 @@
                         else
                         {
                             <tr>
-                                <td colspan="10" style="text-align: center; padding: 40px; color: #6b7280;">
+                                <td colspan="11" style="text-align: center; padding: 40px; color: #6b7280;">
                                     @if (string.IsNullOrWhiteSpace(searchQuery))
                                     {
                                         <span>No products found. Click "Add Item" to add your first product.</span>
@@ -115,6 +120,16 @@
                         }
                     </tbody>
                 </table>
+
+                <!-- Pagination -->
+                @if (FilteredProducts.Any())
+                {
+                    <Pagination CurrentPage="@currentPage"
+                                PageSize="@pageSize"
+                                TotalItems="@FilteredProducts.Count()"
+                                PageChanged="@OnPageChanged"
+                                PageSizeChanged="@OnPageSizeChanged" />
+                }
             </div>
         </div>
     </div>
@@ -194,6 +209,21 @@
 
                     <div class="form-row">
                         <div class="form-group">
+                            <label>Tax</label>
+                            <select class="form-control"
+                                    @bind="selectedTaxId">
+                                <option value="0">No Tax</option>
+                                @foreach (var tax in availableTaxes.Where(t => t.is_active))
+                                {
+                                    <option value="@tax.tax_id">@tax.tax_name - @((tax.tax_rate * 100).ToString("N2"))%</option>
+                                }
+                            </select>
+                            <small class="form-help">Select tax applicable to this product</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
                             <label>SKU</label>
                             <input type="text"
                                    class="form-control"
@@ -251,7 +281,8 @@
                         <div class="form-group">
                             <label>Status</label>
                             <select class="form-control @(HasError("Status") ? "input-error" : "")"
-                                    @bind="newStatus">
+                                    value="@(newStatus.ToString().ToLower())"
+                                    @onchange="OnNewStatusChanged">
                                 <option value="true">Active</option>
                                 <option value="false">Inactive</option>
                             </select>
@@ -355,6 +386,21 @@
 
                     <div class="form-row">
                         <div class="form-group">
+                            <label>Tax</label>
+                            <select class="form-control"
+                                    @bind="editTaxId">
+                                <option value="0">No Tax</option>
+                                @foreach (var tax in availableTaxes.Where(t => t.is_active))
+                                {
+                                    <option value="@tax.tax_id">@tax.tax_name - @((tax.tax_rate * 100).ToString("N2"))%</option>
+                                }
+                            </select>
+                            <small class="form-help">Select tax applicable to this product</small>
+                        </div>
+                    </div>
+
+                    <div class="form-row">
+                        <div class="form-group">
                             <label>SKU</label>
                             <input type="text"
                                    class="form-control"
@@ -411,7 +457,8 @@
                         <div class="form-group">
                             <label>Status</label>
                             <select class="form-control @(HasEditError("Status") ? "input-error" : "")"
-                                    @bind="editStatus">
+                                    value="@(editStatus.ToString().ToLower())"
+                                    @onchange="OnEditStatusChanged">
                                 <option value="true">Active</option>
                                 <option value="false">Inactive</option>
                             </select>
@@ -446,6 +493,7 @@
     private List<ProductDisplay> products = new();
     private List<MauiApp2.Models.Category> availableCategories = new();
     private List<MauiApp2.Models.Brand> availableBrands = new();
+    private List<MauiApp2.Models.Tax> availableTaxes = new();
     private bool showAddModal = false;
     private bool showEditModal = false;
     private ProductDisplay? editingProduct = null;
@@ -455,6 +503,7 @@
     private string newProductName = "";
     private int selectedCategoryId = 0;
     private int selectedBrandId = 0;
+    private int selectedTaxId = 0;
     private string newModelNumber = "";
     private decimal? newCostPrice = null;
     private decimal newSellPrice = 0;
@@ -464,6 +513,7 @@
     private string editProductName = "";
     private int editCategoryId = 0;
     private int editBrandId = 0;
+    private int editTaxId = 0;
     private string editSKU = "";
     private string editModelNumber = "";
     private decimal? editCostPrice = null;
@@ -476,6 +526,10 @@
     private List<string> validationErrors = new List<string>();
     private List<string> editValidationErrors = new List<string>();
 
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+
     // Display model for UI
     public class ProductDisplay
     {
@@ -483,6 +537,7 @@
         public string ProductName { get; set; } = "";
         public string Category { get; set; } = "";
         public string Brand { get; set; } = "";
+        public string Tax { get; set; } = "N/A";
         public string SKU { get; set; } = "";
         public string ModelNumber { get; set; } = "";
         public decimal CostPrice { get; set; }
@@ -491,6 +546,7 @@
         public int Quantity { get; set; }
         public int? BrandId { get; set; }
         public int? CategoryId { get; set; }
+        public int? TaxId { get; set; }
     }
 
     protected override async Task OnInitializedAsync()
@@ -514,6 +570,7 @@
         {
             await LoadCategories();
             await LoadBrands();
+            await LoadTaxes();
             await LoadProducts();
         }
         catch (Exception ex)
@@ -545,20 +602,30 @@
                 dbProducts = new List<MauiApp2.Models.Product>();
             }
 
-            products = dbProducts.Select(p => new ProductDisplay
+            products = dbProducts.Select(p => 
             {
-                ProductId = p.product_id,
-                ProductName = p.product_name,
-                Category = availableCategories?.FirstOrDefault(c => c.category_id == p.category_id)?.category_name ?? "N/A",
-                Brand = availableBrands?.FirstOrDefault(b => b.brand_id == p.brand_id)?.brand_name ?? "N/A",
-                SKU = p.product_sku,
-                ModelNumber = p.model_number ?? "",
-                CostPrice = p.cost_price ?? 0,
-                SellPrice = p.sell_price,
-                Status = p.status == true ? "Active" : "Inactive",
-                Quantity = p.quantity ?? 0,
-                BrandId = p.brand_id,
-                CategoryId = p.category_id
+                var tax = availableTaxes?.FirstOrDefault(t => t.tax_id == p.tax_id);
+                var taxDisplay = tax != null 
+                    ? $"{tax.tax_name} ({(tax.tax_rate * 100).ToString("N2")}%)" 
+                    : "N/A";
+                
+                return new ProductDisplay
+                {
+                    ProductId = p.product_id,
+                    ProductName = p.product_name,
+                    Category = availableCategories?.FirstOrDefault(c => c.category_id == p.category_id)?.category_name ?? "N/A",
+                    Brand = availableBrands?.FirstOrDefault(b => b.brand_id == p.brand_id)?.brand_name ?? "N/A",
+                    Tax = taxDisplay,
+                    SKU = p.product_sku,
+                    ModelNumber = p.model_number ?? "",
+                    CostPrice = p.cost_price ?? 0,
+                    SellPrice = p.sell_price,
+                    Status = p.status == true ? "Active" : "Inactive",
+                    Quantity = p.quantity ?? 0,
+                    BrandId = p.brand_id,
+                    CategoryId = p.category_id,
+                    TaxId = p.tax_id
+                };
             }).ToList();
         }
         catch (Exception ex)
@@ -608,6 +675,29 @@
         catch (Exception ex)
         {
             errorMessage = $"Error loading brands: {ex.Message}";
+        }
+    }
+
+    private async Task LoadTaxes()
+    {
+        try
+        {
+            if (TaxService == null)
+            {
+                Console.WriteLine("TaxService is null");
+                availableTaxes = new List<MauiApp2.Models.Tax>();
+                return;
+            }
+
+            availableTaxes = await TaxService.GetTaxesAsync();
+            if (availableTaxes == null)
+            {
+                availableTaxes = new List<MauiApp2.Models.Tax>();
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading taxes: {ex.Message}";
             Console.WriteLine($"LoadBrands error: {ex}");
             availableBrands = new List<MauiApp2.Models.Brand>();
         }
@@ -627,6 +717,44 @@
                 p.Category.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                 p.Brand.Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
+    }
+
+    private IEnumerable<ProductDisplay> PaginatedProducts
+    {
+        get
+        {
+            var filtered = FilteredProducts.ToList();
+            return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1; // Reset to first page
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        currentPage = 1; // Reset to first page when search changes
+    }
+
+    private void OnNewStatusChanged(ChangeEventArgs e)
+    {
+        newStatus = e.Value?.ToString()?.ToLower() == "true";
+    }
+
+    private void OnEditStatusChanged(ChangeEventArgs e)
+    {
+        editStatus = e.Value?.ToString()?.ToLower() == "true";
     }
 
     // Modal Methods
@@ -655,6 +783,7 @@
         editProductName = product.ProductName;
         editCategoryId = product.CategoryId ?? 0;
         editBrandId = product.BrandId ?? 0;
+        editTaxId = product.TaxId ?? 0;
         editSKU = product.SKU;
         editModelNumber = product.ModelNumber;
         editCostPrice = product.CostPrice;
@@ -678,6 +807,7 @@
         newProductName = "";
         selectedCategoryId = 0;
         selectedBrandId = 0;
+        selectedTaxId = 0;
         newModelNumber = "";
         newCostPrice = null;
         newSellPrice = 0;
@@ -690,6 +820,7 @@
         editProductName = "";
         editCategoryId = 0;
         editBrandId = 0;
+        editTaxId = 0;
         editSKU = "";
         editModelNumber = "";
         editCostPrice = null;
@@ -842,6 +973,7 @@
                 product_name = newProductName.Trim(),
                 category_id = selectedCategoryId > 0 ? selectedCategoryId : null,
                 brand_id = selectedBrandId > 0 ? selectedBrandId : null,
+                tax_id = selectedTaxId > 0 ? selectedTaxId : null,
                 product_sku = "", // Will be auto-generated
                 model_number = string.IsNullOrWhiteSpace(newModelNumber) ? null : newModelNumber.Trim(),
                 cost_price = newCostPrice,
@@ -884,6 +1016,7 @@
                 product_name = editProductName.Trim(),
                 category_id = editCategoryId > 0 ? editCategoryId : null,
                 brand_id = editBrandId > 0 ? editBrandId : null,
+                tax_id = editTaxId > 0 ? editTaxId : null,
                 product_sku = editSKU, // Keep existing SKU
                 model_number = string.IsNullOrWhiteSpace(editModelNumber) ? null : editModelNumber.Trim(),
                 cost_price = editCostPrice,

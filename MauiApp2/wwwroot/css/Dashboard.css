@@ -1,8 +1,9 @@
 ﻿﻿ /* Dashboard Layout - Matching User List Design */
 .dashboard-wrapper {
     display: flex;
-    min-height: 100vh;
+    height: 100vh;
     background-color: #f5f7fa;
+    overflow: hidden;
 }
 
 /* Main Content Area - Offset for sidebar */
@@ -10,7 +11,9 @@
     flex: 1;
     margin-left: 280px; /* Match sidebar width */
     padding: 0;
-    min-height: 100vh;
+    height: 100vh;
+    overflow-y: auto;
+    overflow-x: hidden;
     background-color: #f5f7fa;
     transition: margin-left 0.3s ease;
 }

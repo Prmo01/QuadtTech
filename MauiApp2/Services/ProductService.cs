@@ -31,7 +31,7 @@ namespace MauiApp2.Services
                 await connection.OpenAsync();
 
                 var command = new SqlCommand(@"
-                    SELECT product_id, brand_id, category_id, product_name, product_sku, 
+                    SELECT product_id, brand_id, category_id, tax_id, product_name, product_sku, 
                            model_number, cost_price, sell_price, quantity, status, 
                            created_date, modified_date 
                     FROM tbl_product 
@@ -45,15 +45,16 @@ namespace MauiApp2.Services
                         product_id = reader.GetInt32(0),
                         brand_id = reader.IsDBNull(1) ? null : reader.GetInt32(1),
                         category_id = reader.IsDBNull(2) ? null : reader.GetInt32(2),
-                        product_name = reader.GetString(3),
-                        product_sku = reader.GetString(4),
-                        model_number = reader.IsDBNull(5) ? null : reader.GetString(5),
-                        cost_price = reader.IsDBNull(6) ? null : reader.GetDecimal(6),
-                        sell_price = reader.GetDecimal(7),
-                        quantity = reader.IsDBNull(8) ? null : reader.GetInt32(8),
-                        status = reader.IsDBNull(9) ? null : reader.GetBoolean(9),
-                        created_date = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+                        tax_id = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                        product_name = reader.GetString(4),
+                        product_sku = reader.GetString(5),
+                        model_number = reader.IsDBNull(6) ? null : reader.GetString(6),
+                        cost_price = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+                        sell_price = reader.GetDecimal(8),
+                        quantity = reader.IsDBNull(9) ? null : reader.GetInt32(9),
+                        status = reader.IsDBNull(10) ? null : reader.GetBoolean(10),
+                        created_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                        modified_date = reader.IsDBNull(12) ? null : reader.GetDateTime(12)
                     });
                 }
             }
@@ -192,16 +193,17 @@ namespace MauiApp2.Services
                 }
 
                 var command = new SqlCommand(@"
-                    INSERT INTO tbl_product (brand_id, category_id, product_name, product_sku, 
+                    INSERT INTO tbl_product (brand_id, category_id, tax_id, product_name, product_sku, 
                                              model_number, cost_price, sell_price, quantity, 
                                              status, created_date, modified_date)
-                    VALUES (@brand_id, @category_id, @product_name, @product_sku, 
+                    VALUES (@brand_id, @category_id, @tax_id, @product_name, @product_sku, 
                             @model_number, @cost_price, @sell_price, @quantity, 
                             @status, @created_date, @modified_date);
                     SELECT SCOPE_IDENTITY();", connection);
 
                 command.Parameters.AddWithValue("@brand_id", (object)product.brand_id ?? DBNull.Value);
                 command.Parameters.AddWithValue("@category_id", (object)product.category_id ?? DBNull.Value);
+                command.Parameters.AddWithValue("@tax_id", (object)product.tax_id ?? DBNull.Value);
                 command.Parameters.AddWithValue("@product_name", product.product_name);
                 command.Parameters.AddWithValue("@product_sku", sku);
                 command.Parameters.AddWithValue("@model_number", (object)product.model_number ?? DBNull.Value);
@@ -245,6 +247,7 @@ namespace MauiApp2.Services
                     UPDATE tbl_product 
                     SET brand_id = @brand_id, 
                         category_id = @category_id, 
+                        tax_id = @tax_id,
                         product_name = @product_name, 
                         product_sku = @product_sku, 
                         model_number = @model_number, 
@@ -258,6 +261,7 @@ namespace MauiApp2.Services
                 command.Parameters.AddWithValue("@product_id", product.product_id);
                 command.Parameters.AddWithValue("@brand_id", (object)product.brand_id ?? DBNull.Value);
                 command.Parameters.AddWithValue("@category_id", (object)product.category_id ?? DBNull.Value);
+                command.Parameters.AddWithValue("@tax_id", (object)product.tax_id ?? DBNull.Value);
                 command.Parameters.AddWithValue("@product_name", product.product_name);
                 command.Parameters.AddWithValue("@product_sku", product.product_sku);
                 command.Parameters.AddWithValue("@model_number", (object)product.model_number ?? DBNull.Value);
@@ -311,7 +315,7 @@ namespace MauiApp2.Services
                 await connection.OpenAsync();
 
                 var command = new SqlCommand(@"
-                    SELECT product_id, brand_id, category_id, product_name, product_sku, 
+                    SELECT product_id, brand_id, category_id, tax_id, product_name, product_sku, 
                            model_number, cost_price, sell_price, quantity, status, 
                            created_date, modified_date 
                     FROM tbl_product 
@@ -327,15 +331,16 @@ namespace MauiApp2.Services
                         product_id = reader.GetInt32(0),
                         brand_id = reader.IsDBNull(1) ? null : reader.GetInt32(1),
                         category_id = reader.IsDBNull(2) ? null : reader.GetInt32(2),
-                        product_name = reader.GetString(3),
-                        product_sku = reader.GetString(4),
-                        model_number = reader.IsDBNull(5) ? null : reader.GetString(5),
-                        cost_price = reader.IsDBNull(6) ? null : reader.GetDecimal(6),
-                        sell_price = reader.GetDecimal(7),
-                        quantity = reader.IsDBNull(8) ? null : reader.GetInt32(8),
-                        status = reader.IsDBNull(9) ? null : reader.GetBoolean(9),
-                        created_date = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+                        tax_id = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                        product_name = reader.GetString(4),
+                        product_sku = reader.GetString(5),
+                        model_number = reader.IsDBNull(6) ? null : reader.GetString(6),
+                        cost_price = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+                        sell_price = reader.GetDecimal(8),
+                        quantity = reader.IsDBNull(9) ? null : reader.GetInt32(9),
+                        status = reader.IsDBNull(10) ? null : reader.GetBoolean(10),
+                        created_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                        modified_date = reader.IsDBNull(12) ? null : reader.GetDateTime(12)
                     };
                 }
 
@@ -356,7 +361,7 @@ namespace MauiApp2.Services
                 await connection.OpenAsync();
 
                 var command = new SqlCommand(@"
-                    SELECT product_id, brand_id, category_id, product_name, product_sku, 
+                    SELECT product_id, brand_id, category_id, tax_id, product_name, product_sku, 
                            model_number, cost_price, sell_price, quantity, status, 
                            created_date, modified_date 
                     FROM tbl_product 
@@ -372,15 +377,16 @@ namespace MauiApp2.Services
                         product_id = reader.GetInt32(0),
                         brand_id = reader.IsDBNull(1) ? null : reader.GetInt32(1),
                         category_id = reader.IsDBNull(2) ? null : reader.GetInt32(2),
-                        product_name = reader.GetString(3),
-                        product_sku = reader.GetString(4),
-                        model_number = reader.IsDBNull(5) ? null : reader.GetString(5),
-                        cost_price = reader.IsDBNull(6) ? null : reader.GetDecimal(6),
-                        sell_price = reader.GetDecimal(7),
-                        quantity = reader.IsDBNull(8) ? null : reader.GetInt32(8),
-                        status = reader.IsDBNull(9) ? null : reader.GetBoolean(9),
-                        created_date = reader.IsDBNull(10) ? null : reader.GetDateTime(10),
-                        modified_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11)
+                        tax_id = reader.IsDBNull(3) ? null : reader.GetInt32(3),
+                        product_name = reader.GetString(4),
+                        product_sku = reader.GetString(5),
+                        model_number = reader.IsDBNull(6) ? null : reader.GetString(6),
+                        cost_price = reader.IsDBNull(7) ? null : reader.GetDecimal(7),
+                        sell_price = reader.GetDecimal(8),
+                        quantity = reader.IsDBNull(9) ? null : reader.GetInt32(9),
+                        status = reader.IsDBNull(10) ? null : reader.GetBoolean(10),
+                        created_date = reader.IsDBNull(11) ? null : reader.GetDateTime(11),
+                        modified_date = reader.IsDBNull(12) ? null : reader.GetDateTime(12)
                     };
                 }
 

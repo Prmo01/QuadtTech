@@ -1,5 +1,5 @@
-/* Brand Management Styles - Matching Category Layout */
-.brand-management {
+/* Supplier Management Styles - Matching Brand/Category Layout */
+.supplier-management {
     background-color: white;
     border-radius: 16px;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1), 0 1px 2px rgba(0, 0, 0, 0.06);
@@ -55,7 +55,7 @@
         border-bottom-color: #2563eb;
     }
 
-.brand-table-container {
+.supplier-table-container {
     padding: 30px;
 }
 
@@ -138,7 +138,7 @@
 }
 
 /* Toolbar Styles */
-.brand-toolbar {
+.supplier-toolbar {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -147,7 +147,7 @@
     flex-wrap: wrap;
 }
 
-.add-brand-btn {
+.add-supplier-btn {
     background: #2563eb;
     color: white;
     border: none;
@@ -164,32 +164,32 @@
     letter-spacing: 0.3px;
 }
 
-    .add-brand-btn:hover:not(:disabled) {
+    .add-supplier-btn:hover:not(:disabled) {
         background: #1d4ed8;
         transform: translateY(-2px);
         box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
     }
 
-    .add-brand-btn:disabled {
+    .add-supplier-btn:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
     }
 
-    .add-brand-btn::before {
+    .add-supplier-btn::before {
         content: '+';
         font-size: 22px;
         font-weight: 700;
         line-height: 1;
     }
 
-.brand-search-container {
+.supplier-search-container {
     position: relative;
     flex: 1;
     max-width: 450px;
 }
 
-.brand-search-input {
+.supplier-search-input {
     width: 100%;
     padding: 12px 50px 12px 18px;
     border: 2px solid #d1d5db;
@@ -200,22 +200,22 @@
     background-color: #f9fafb;
 }
 
-    .brand-search-input:focus {
+    .supplier-search-input:focus {
         border-color: #2563eb;
         background-color: white;
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
-    .brand-search-input::placeholder {
+    .supplier-search-input::placeholder {
         color: #9ca3af;
     }
 
-    .brand-search-input:disabled {
+    .supplier-search-input:disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }
 
-.brand-search-icon {
+.supplier-search-icon {
     position: absolute;
     right: 18px;
     top: 50%;
@@ -226,7 +226,7 @@
 }
 
 /* Table Styles */
-.brand-table {
+.supplier-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
@@ -235,11 +235,11 @@
     overflow: hidden;
 }
 
-    .brand-table thead {
+    .supplier-table thead {
         background: linear-gradient(180deg, #f9fafb 0%, #f3f4f6 100%);
     }
 
-    .brand-table th {
+    .supplier-table th {
         padding: 16px 20px;
         text-align: left;
         font-size: 12px;
@@ -251,52 +251,63 @@
         white-space: nowrap;
     }
 
-    .brand-table tbody tr {
+    .supplier-table tbody tr {
         transition: all 0.2s ease;
         background-color: white;
     }
 
-        .brand-table tbody tr:hover {
+        .supplier-table tbody tr:hover {
             background-color: #f9fafb;
             transform: scale(1.001);
         }
 
-        .brand-table tbody tr:not(:last-child) {
+        .supplier-table tbody tr:not(:last-child) {
             border-bottom: 1px solid #f3f4f6;
         }
 
-    .brand-table td {
+    .supplier-table td {
         padding: 18px 20px;
         font-size: 14px;
         color: #1f2937;
         vertical-align: middle;
     }
 
-        .brand-table td:first-child {
+        .supplier-table td:first-child {
             color: #6b7280;
             font-weight: 600;
         }
 
-        .brand-table td:nth-child(2) {
+        .supplier-table td:nth-child(2) {
             font-weight: 600;
             color: #2563eb;
         }
 
-.brand-description {
-    max-width: 300px;
-}
-
-.description-text {
-    color: #6b7280;
-    line-height: 1.4;
-}
-
-.no-description {
+.no-data {
     color: #9ca3af;
     font-style: italic;
 }
 
-.brand-edit-btn {
+.status-badge {
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.status-active {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-inactive {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+.supplier-edit-btn {
     background: #f3f4f6;
     color: #374151;
     border: 1px solid #d1d5db;
@@ -308,21 +319,21 @@
     transition: all 0.3s ease;
 }
 
-    .brand-edit-btn:hover:not(:disabled) {
+    .supplier-edit-btn:hover:not(:disabled) {
         background: #2563eb;
         color: white;
         border-color: #2563eb;
         transform: translateY(-1px);
     }
 
-    .brand-edit-btn:disabled {
+    .supplier-edit-btn:disabled {
         opacity: 0.5;
         cursor: not-allowed;
         transform: none;
     }
 
-/* Brand Modal Styles */
-.brand-modal-overlay {
+/* Supplier Modal Styles */
+.supplier-modal-overlay {
     position: fixed;
     top: 0;
     left: 0;
@@ -336,7 +347,7 @@
     backdrop-filter: blur(4px);
 }
 
-.brand-modal-content {
+.supplier-modal-content {
     background: white;
     border-radius: 16px;
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
@@ -359,7 +370,7 @@
     }
 }
 
-.brand-modal-header {
+.supplier-modal-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -367,14 +378,14 @@
     border-bottom: 1px solid #e5e7eb;
 }
 
-    .brand-modal-header h3 {
+    .supplier-modal-header h3 {
         margin: 0;
         font-size: 20px;
         font-weight: 700;
         color: #111827;
     }
 
-.brand-modal-close {
+.supplier-modal-close {
     background: none;
     border: none;
     font-size: 28px;
@@ -390,12 +401,12 @@
     transition: all 0.2s ease;
 }
 
-    .brand-modal-close:hover {
+    .supplier-modal-close:hover {
         background-color: #f3f4f6;
         color: #374151;
     }
 
-.brand-modal-body {
+.supplier-modal-body {
     padding: 30px;
 }
 
@@ -426,25 +437,25 @@
         margin-bottom: 4px;
     }
 
-.brand-form-container {
+.supplier-form-container {
     display: flex;
     flex-direction: column;
     gap: 20px;
 }
 
-.brand-form-group {
+.supplier-form-group {
     display: flex;
     flex-direction: column;
     gap: 8px;
 }
 
-    .brand-form-group label {
+    .supplier-form-group label {
         font-size: 14px;
         font-weight: 600;
         color: #374151;
     }
 
-.brand-form-control {
+.supplier-form-control {
     padding: 12px 16px;
     border: 2px solid #d1d5db;
     border-radius: 8px;
@@ -454,42 +465,84 @@
     background-color: #f9fafb;
 }
 
-    .brand-form-control:focus {
+    .supplier-form-control:focus {
         border-color: #2563eb;
         background-color: white;
         box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
     }
 
-    .brand-form-control.input-error {
+    .supplier-form-control.input-error {
         border-color: #ef4444;
         background-color: #fef2f2;
     }
 
-    .brand-form-control:disabled {
+    .supplier-form-control:disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }
 
-.brand-field-error {
+.supplier-field-error {
     color: #ef4444;
     font-size: 12px;
     font-weight: 500;
 }
 
-.brand-textarea {
-    resize: vertical;
-    min-height: 100px;
-    font-family: inherit;
-}
-
-.character-count {
-    text-align: right;
-    color: #6b7280;
-    font-size: 12px;
+.form-help {
+    display: block;
     margin-top: 4px;
+    font-size: 12px;
+    color: #6b7280;
 }
 
-.brand-modal-footer {
+/* Phone Number Input Styles */
+.phone-input-wrapper {
+    display: flex;
+    align-items: center;
+    border: 2px solid #d1d5db;
+    border-radius: 8px;
+    background-color: #f9fafb;
+    transition: all 0.3s ease;
+}
+
+.phone-input-wrapper:focus-within {
+    border-color: #2563eb;
+    background-color: white;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.1);
+}
+
+.phone-prefix {
+    padding: 12px 12px 12px 16px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #374151;
+    background-color: #f3f4f6;
+    border-right: 1px solid #d1d5db;
+    user-select: none;
+    pointer-events: none;
+    border-radius: 6px 0 0 6px;
+}
+
+.phone-input {
+    border: none;
+    outline: none;
+    padding: 12px 16px;
+    font-size: 14px;
+    background-color: transparent;
+    flex: 1;
+    border-radius: 0 6px 6px 0;
+}
+
+.phone-input:focus {
+    border: none;
+    box-shadow: none;
+}
+
+.phone-input:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+.supplier-modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: 12px;
@@ -497,7 +550,7 @@
     border-top: 1px solid #e5e7eb;
 }
 
-.brand-btn-cancel {
+.supplier-btn-cancel {
     background: #f3f4f6;
     color: #374151;
     border: 2px solid #d1d5db;
@@ -509,17 +562,17 @@
     transition: all 0.3s ease;
 }
 
-    .brand-btn-cancel:hover:not(:disabled) {
+    .supplier-btn-cancel:hover:not(:disabled) {
         background: #e5e7eb;
         border-color: #9ca3af;
     }
 
-    .brand-btn-cancel:disabled {
+    .supplier-btn-cancel:disabled {
         opacity: 0.6;
         cursor: not-allowed;
     }
 
-.brand-btn-submit {
+.supplier-btn-submit {
     background: #2563eb;
     color: white;
     border: none;
@@ -532,69 +585,70 @@
     box-shadow: 0 2px 8px rgba(37, 99, 235, 0.3);
 }
 
-    .brand-btn-submit:hover:not(:disabled) {
+    .supplier-btn-submit:hover:not(:disabled) {
         background: #1d4ed8;
         transform: translateY(-2px);
         box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
     }
 
-    .brand-btn-submit:disabled {
+    .supplier-btn-submit:disabled {
         opacity: 0.6;
         cursor: not-allowed;
         transform: none;
     }
 
-/* Responsive Design for Brand */
+/* Responsive Design for Supplier */
 @media (max-width: 768px) {
     .main-content {
         margin-left: 0;
         padding: 16px;
     }
 
-    .brand-table-container {
+    .supplier-table-container {
         padding: 20px;
         overflow-x: auto;
     }
 
-    .brand-toolbar {
+    .supplier-toolbar {
         flex-direction: column;
         align-items: stretch;
     }
 
-    .brand-search-container {
+    .supplier-search-container {
         max-width: 100%;
     }
 
-    .add-brand-btn {
+    .add-supplier-btn {
         width: 100%;
         justify-content: center;
     }
 
-    .brand-modal-content {
+    .supplier-modal-content {
         width: 95%;
         margin: 20px;
     }
 
-    .brand-modal-body {
+    .supplier-modal-body {
         padding: 20px;
     }
 
-    .brand-modal-footer {
+    .supplier-modal-footer {
         padding: 15px 20px 20px;
         flex-direction: column;
     }
 
-    .brand-btn-cancel,
-    .brand-btn-submit {
+    .supplier-btn-cancel,
+    .supplier-btn-submit {
         width: 100%;
     }
 
-    .brand-table {
+    .supplier-table {
         font-size: 12px;
     }
 
-        .brand-table th,
-        .brand-table td {
+        .supplier-table th,
+        .supplier-table td {
             padding: 12px 8px;
         }
 }
+

@@ -4,6 +4,8 @@
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 
+<link href="css/pagination.css" rel="stylesheet" />
+
 <div class="dashboard-wrapper">
     <Sidebar />
     <div class="main-content">
@@ -48,8 +50,8 @@
                         <input type="text"
                                class="search-input"
                                placeholder="Search purchase orders..."
-                               @bind="searchTerm"
-                               @bind:event="oninput" />
+                               value="@searchTerm"
+                               @oninput="OnSearchInput" />
                         <i class="fas fa-search search-icon"></i>
                     </div>
                 </div>
@@ -68,9 +70,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (purchaseOrderHistory.Any())
+                        @if (PaginatedOrders.Any())
                         {
-                            @foreach (var order in purchaseOrderHistory)
+                            @foreach (var order in PaginatedOrders)
                             {
                                 <tr>
                                     <td>@order.PONumber</td>
@@ -125,6 +127,16 @@
                         }
                     </tbody>
                 </table>
+
+                <!-- Pagination -->
+                @if (FilteredOrders.Any())
+                {
+                    <Pagination CurrentPage="@currentPage"
+                                PageSize="@pageSize"
+                                TotalItems="@FilteredOrders.Count()"
+                                PageChanged="@OnPageChanged"
+                                PageSizeChanged="@OnPageSizeChanged" />
+                }
             </div>
         </div>
     </div>
@@ -348,54 +360,22 @@
     private List<OrderItem> orderItems = new List<OrderItem>();
     private List<PurchaseOrder> purchaseOrderHistory = new List<PurchaseOrder>();
 
-    // Sample data
-    private List<Supplier> suppliers = new List<Supplier>
-    {
-        new Supplier { Id = "1", Name = "Tech Supplies Inc.", Email = "contact@techsupplies.com", ContactNumber = "+63 912 345 6789" },
-        new Supplier { Id = "2", Name = "Global Electronics Ltd.", Email = "sales@globalelectronics.com", ContactNumber = "+63 917 654 3210" },
-        new Supplier { Id = "3", Name = "Office Equipment Co.", Email = "info@officeequip.com", ContactNumber = "+63 918 765 4321" }
-    };
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
 
-    private List<Product> products = new List<Product>
-    {
-        new Product { Id = "1", Name = "Laptop Dell XPS 13", Brand = "Dell", Category = "Electronics" },
-        new Product { Id = "2", Name = "Wireless Mouse", Brand = "Logitech", Category = "Accessories" },
-        new Product { Id = "3", Name = "Mechanical Keyboard", Brand = "Corsair", Category = "Accessories" },
-        new Product { Id = "4", Name = "27-inch Monitor", Brand = "Samsung", Category = "Electronics" }
-    };
+    // Data collections (loaded from database)
+    private List<Supplier> suppliers = new List<Supplier>();
+    private List<Product> products = new List<Product>();
 
     protected override void OnInitialized()
     {
-        LoadSampleData();
-    }
-
-    private void LoadSampleData()
-    {
-        purchaseOrderHistory = new List<PurchaseOrder>
+        if (!AuthService.IsAuthenticated)
         {
-            new PurchaseOrder
-            {
-                PONumber = "PO-001",
-                SupplierName = "Tech Supplies Inc.",
-                SupplierEmail = "contact@techsupplies.com",
-                DateOrdered = DateTime.Now.AddDays(-5),
-                ExpectedDate = DateTime.Now.AddDays(2),
-                TotalItems = 3,
-                TotalAmount = 45000.00m,
-                Status = "Pending"
-            },
-            new PurchaseOrder
-            {
-                PONumber = "PO-002",
-                SupplierName = "Global Electronics Ltd.",
-                SupplierEmail = "sales@globalelectronics.com",
-                DateOrdered = DateTime.Now.AddDays(-10),
-                ExpectedDate = DateTime.Now.AddDays(-3),
-                TotalItems = 5,
-                TotalAmount = 12500.50m,
-                Status = "Delivered"
-            }
-        };
+            Navigation.NavigateTo("/");
+            return;
+        }
+        // Data will be loaded from database when services are implemented
     }
 
     private void ShowPurchaseOrderModal()
@@ -483,6 +463,49 @@
     private decimal GetGrandTotal()
     {
         return orderItems.Sum(item => item.TotalPrice);
+    }
+
+    private IEnumerable<PurchaseOrder> FilteredOrders
+    {
+        get
+        {
+            if (string.IsNullOrWhiteSpace(searchTerm))
+                return purchaseOrderHistory;
+
+            return purchaseOrderHistory.Where(o =>
+                o.PONumber.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                o.SupplierName.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                o.SupplierEmail.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                o.Status.Contains(searchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+    }
+
+    private IEnumerable<PurchaseOrder> PaginatedOrders
+    {
+        get
+        {
+            var filtered = FilteredOrders.ToList();
+            return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchTerm = e.Value?.ToString() ?? "";
+        currentPage = 1;
     }
 
     private void AddItem()

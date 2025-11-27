@@ -7,6 +7,8 @@
 @inject IRoleService RoleService
 @inject NavigationManager Navigation
 
+<link href="css/pagination.css" rel="stylesheet" />
+
 <div class="dashboard-wrapper">
     <Sidebar />
 
@@ -52,8 +54,8 @@
                         <input type="text"
                                class="search-input"
                                placeholder="Search users by name, username, or email..."
-                               @bind="searchQuery"
-                               @bind:event="oninput" />
+                               value="@searchQuery"
+                               @oninput="OnSearchInput" />
                         
                     </div>
                 </div>
@@ -72,9 +74,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (FilteredUsers.Any())
+                        @if (PaginatedUsers.Any())
                         {
-                            @foreach (var user in FilteredUsers)
+                            @foreach (var user in PaginatedUsers)
                             {
                                 <tr>
                                     <td>@user.user_id</td>
@@ -115,6 +117,16 @@
                         }
                     </tbody>
                 </table>
+
+                <!-- Pagination -->
+                @if (FilteredUsers.Any())
+                {
+                    <Pagination CurrentPage="@currentPage"
+                                PageSize="@pageSize"
+                                TotalItems="@FilteredUsers.Count()"
+                                PageChanged="@OnPageChanged"
+                                PageSizeChanged="@OnPageSizeChanged" />
+                }
             </div>
         </div>
     </div>
@@ -236,7 +248,8 @@
                     <div class="form-group">
                         <label>Status *</label>
                         <select class="form-control @(HasError("Status") ? "input-error" : "")"
-                                @bind="newIsActive">
+                                value="@(newIsActive.ToString().ToLower())"
+                                @onchange="OnNewStatusChanged">
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
                         </select>
@@ -365,7 +378,8 @@
                     <div class="form-group">
                         <label>Status *</label>
                         <select class="form-control @(HasEditError("Status") ? "input-error" : "")"
-                                @bind="editIsActive">
+                                value="@(editIsActive.ToString().ToLower())"
+                                @onchange="OnEditStatusChanged">
                             <option value="true">Active</option>
                             <option value="false">Inactive</option>
                         </select>
@@ -392,6 +406,10 @@
     private bool showEditModal = false;
     private MauiApp2.Models.User? editingUser = null;
     private string rolesErrorMessage = "";
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
 
     // Add form fields
     private string newFullName = "";
@@ -530,6 +548,44 @@
                 u.email.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
                 GetRoleName(u.role_id).Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
+    }
+
+    private IEnumerable<MauiApp2.Models.User> PaginatedUsers
+    {
+        get
+        {
+            var filtered = FilteredUsers.ToList();
+            return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        currentPage = 1;
+    }
+
+    private void OnNewStatusChanged(ChangeEventArgs e)
+    {
+        newIsActive = e.Value?.ToString()?.ToLower() == "true";
+    }
+
+    private void OnEditStatusChanged(ChangeEventArgs e)
+    {
+        editIsActive = e.Value?.ToString()?.ToLower() == "true";
     }
 
     // Modal Methods

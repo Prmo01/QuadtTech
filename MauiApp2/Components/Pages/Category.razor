@@ -9,6 +9,7 @@
 @inject IJSRuntime JSRuntime
 
 <link href="css/category.css" rel="stylesheet" />
+<link href="css/pagination.css" rel="stylesheet" />
 
 <div class="dashboard-wrapper">
     <Sidebar />
@@ -63,8 +64,8 @@
                         <input type="text"
                                class="brand-search-input"
                                placeholder="Search categories..."
-                               @bind="searchQuery"
-                               @bind:event="oninput"
+                               value="@searchQuery"
+                               @oninput="OnSearchInput"
                                disabled="@isLoading" />
                         <span class="brand-search-icon">🔎︎</span>
                     </div>
@@ -80,9 +81,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (FilteredCategories.Any())
+                        @if (PaginatedCategories.Any())
                         {
-                            @foreach (var category in FilteredCategories)
+                            @foreach (var category in PaginatedCategories)
                             {
                                 <tr>
                                     <td>@category.category_id</td>
@@ -126,6 +127,16 @@
                         }
                     </tbody>
                 </table>
+
+                <!-- Pagination -->
+                @if (FilteredCategories.Any())
+                {
+                    <Pagination CurrentPage="@currentPage"
+                                PageSize="@pageSize"
+                                TotalItems="@FilteredCategories.Count()"
+                                PageChanged="@OnPageChanged"
+                                PageSizeChanged="@OnPageSizeChanged" />
+                }
             </div>
         </div>
     </div>
@@ -291,6 +302,10 @@
     private List<string> validationErrors = new List<string>();
     private List<string> editValidationErrors = new List<string>();
 
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+
     protected override async Task OnInitializedAsync()
     {
         try
@@ -362,6 +377,34 @@
                 (c.description != null && c.description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
                 c.category_id.ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
+    }
+
+    private IEnumerable<MauiApp2.Models.Category> PaginatedCategories
+    {
+        get
+        {
+            var filtered = FilteredCategories.ToList();
+            return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        currentPage = 1;
     }
 
     // Modal Methods

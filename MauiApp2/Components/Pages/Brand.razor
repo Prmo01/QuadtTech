@@ -9,6 +9,7 @@
 @inject IJSRuntime JSRuntime
 
 <link href="css/brand.css" rel="stylesheet" />
+<link href="css/pagination.css" rel="stylesheet" />
 
 <div class="dashboard-wrapper">
     <Sidebar />
@@ -63,8 +64,8 @@
                         <input type="text"
                                class="brand-search-input"
                                placeholder="Search brands..."
-                               @bind="searchQuery"
-                               @bind:event="oninput"
+                               value="@searchQuery"
+                               @oninput="OnSearchInput"
                                disabled="@isLoading" />
                         <span class="brand-search-icon">🔎︎</span>
                     </div>
@@ -80,9 +81,9 @@
                         </tr>
                     </thead>
                     <tbody>
-                        @if (FilteredBrands.Any())
+                        @if (PaginatedBrands.Any())
                         {
-                            @foreach (var brand in FilteredBrands)
+                            @foreach (var brand in PaginatedBrands)
                             {
                                 <tr>
                                     <td>@brand.brand_id</td>
@@ -131,6 +132,16 @@
                         }
                     </tbody>
                 </table>
+
+                <!-- Pagination -->
+                @if (FilteredBrands.Any())
+                {
+                    <Pagination CurrentPage="@currentPage"
+                                PageSize="@pageSize"
+                                TotalItems="@FilteredBrands.Count()"
+                                PageChanged="@OnPageChanged"
+                                PageSizeChanged="@OnPageSizeChanged" />
+                }
             </div>
         </div>
     </div>
@@ -292,6 +303,10 @@
     private List<string> validationErrors = new List<string>();
     private List<string> editValidationErrors = new List<string>();
 
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadBrands();
@@ -331,6 +346,34 @@
                 (b.description != null && b.description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
                 b.brand_id.ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
         }
+    }
+
+    private IEnumerable<MauiApp2.Models.Brand> PaginatedBrands
+    {
+        get
+        {
+            var filtered = FilteredBrands.ToList();
+            return filtered.Skip((currentPage - 1) * pageSize).Take(pageSize);
+        }
+    }
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private void OnSearchInput(ChangeEventArgs e)
+    {
+        searchQuery = e.Value?.ToString() ?? "";
+        currentPage = 1;
     }
 
     // Modal Methods
