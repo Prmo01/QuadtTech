@@ -1,8 +1,15 @@
 ﻿@page "/purchase-orders"
 @layout MainLayout
 @using MauiApp2.Services
+@using MauiApp2.Models
+@using SupplierModel = MauiApp2.Models.Supplier
+@using Microsoft.JSInterop
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject ISupplierService SupplierService
+@inject IProductService ProductService
+@inject IPurchaseOrderService PurchaseOrderService
+@inject IJSRuntime JSRuntime
 
 <link href="css/pagination.css" rel="stylesheet" />
 
@@ -87,21 +94,33 @@
                                     <td>@order.TotalItems</td>
                                     <td>₱@order.TotalAmount.ToString("N2")</td>
                                     <td>
-                                        <span class="status-badge @order.Status.ToLower()">
+                                        <span class="status-badge @GetStatusBadgeClass(order.Status)">
                                             @order.Status
                                         </span>
                                     </td>
                                     <td>
                                         <div class="action-buttons">
-                                            <button class="edit-btn" title="View Details">
+                                            <button class="view-btn" title="View Details" @onclick="() => ViewPurchaseOrderDetails(order)">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            <button class="edit-btn" title="Edit">
-                                                <i class="fas fa-edit"></i>
-                                            </button>
-                                            <button class="deactivate-btn" title="Delete">
-                                                <i class="fas fa-trash"></i>
-                                            </button>
+                                            @if (order.Status != "Delivered" && order.Status != "Cancelled")
+                                            {
+                                                <button class="edit-btn" title="Mark as Delivered" @onclick="() => MarkAsDelivered(order)">
+                                                    <i class="fas fa-check-circle"></i>
+                                                </button>
+                                            }
+                                            @if (order.Status == "Delivered")
+                                            {
+                                                <button class="edit-btn" title="Go to Stock In" @onclick="() => GoToStockIn()">
+                                                    <i class="fas fa-truck-loading"></i>
+                                                </button>
+                                            }
+                                            @if (order.Status != "Delivered" && order.Status != "Cancelled")
+                                            {
+                                                <button class="deactivate-btn" title="Cancel Purchase Order" @onclick="() => CancelPurchaseOrder(order)">
+                                                    <i class="fas fa-times-circle"></i>
+                                                </button>
+                                            }
                                         </div>
                                     </td>
                                 </tr>
@@ -306,7 +325,7 @@
                 <div class="form-container">
                     <div class="form-group">
                         <label>Product *</label>
-                        <select class="form-control" @bind="selectedProductId">
+                        <select class="form-control" value="@selectedProductId" @onchange="OnProductSelected">
                             <option value="">Select Product</option>
                             @foreach (var product in products)
                             {
@@ -336,9 +355,117 @@
     </div>
 }
 
+<!-- View Purchase Order Details Modal -->
+@if (showViewDetailsModal && viewingPurchaseOrder != null)
+{
+    <div class="modal-overlay" @onclick="CloseViewDetailsModal">
+        <div class="modal-content large-modal" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Purchase Order Details - @viewingPurchaseOrder.PONumber</h3>
+                <button class="modal-close" @onclick="CloseViewDetailsModal">×</button>
+            </div>
+            <div class="modal-body">
+                @if (isLoadingDetails)
+                {
+                    <div class="loading-indicator">
+                        <div class="spinner"></div>
+                        <span>Loading details...</span>
+                    </div>
+                }
+                else
+                {
+                    <!-- PO Information Section -->
+                    <div class="po-details-section">
+                        <div class="po-details-grid">
+                            <div class="po-detail-item">
+                                <label>PO Number:</label>
+                                <span>@viewingPurchaseOrder.PONumber</span>
+                            </div>
+                            <div class="po-detail-item">
+                                <label>Supplier:</label>
+                                <span>@viewingPurchaseOrder.SupplierName</span>
+                            </div>
+                            <div class="po-detail-item">
+                                <label>Date Ordered:</label>
+                                <span>@viewingPurchaseOrder.DateOrdered.ToString("MM/dd/yyyy")</span>
+                            </div>
+                            <div class="po-detail-item">
+                                <label>Expected Date:</label>
+                                <span>@viewingPurchaseOrder.ExpectedDate.ToString("MM/dd/yyyy")</span>
+                            </div>
+                            <div class="po-detail-item">
+                                <label>Status:</label>
+                                <span class="status-badge @GetStatusBadgeClass(viewingPurchaseOrder.Status)">@viewingPurchaseOrder.Status</span>
+                            </div>
+                            <div class="po-detail-item">
+                                <label>Total Items:</label>
+                                <span>@viewingPurchaseOrder.TotalItems</span>
+                            </div>
+                            <div class="po-detail-item full-width">
+                                <label>Total Amount:</label>
+                                <span class="total-amount">₱@viewingPurchaseOrder.TotalAmount.ToString("N2")</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Items Section -->
+                    <div class="po-items-section">
+                        <h4>Order Items</h4>
+                        @if (viewingPOItems.Any())
+                        {
+                            <table class="po-items-table">
+                                <thead>
+                                    <tr>
+                                        <th>Product Name</th>
+                                        <th>SKU</th>
+                                        <th>Quantity</th>
+                                        <th>Unit Cost</th>
+                                        <th>Total</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    @foreach (var item in viewingPOItems)
+                                    {
+                                        <tr>
+                                            <td>@(item.product_name ?? "N/A")</td>
+                                            <td>@(item.product_sku ?? "N/A")</td>
+                                            <td>@item.quantity_ordered</td>
+                                            <td>₱@item.unit_cost.ToString("N2")</td>
+                                            <td>₱@((item.quantity_ordered * item.unit_cost).ToString("N2"))</td>
+                                        </tr>
+                                    }
+                                </tbody>
+                                <tfoot>
+                                    <tr>
+                                        <td colspan="4" style="text-align: right; font-weight: 600;">Grand Total:</td>
+                                        <td style="font-weight: 700; font-size: 16px;">₱@viewingPurchaseOrder.TotalAmount.ToString("N2")</td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                        }
+                        else
+                        {
+                            <div class="no-items">
+                                <p>No items found for this purchase order.</p>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseViewDetailsModal">Close</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private bool showPurchaseOrderModal = false;
     private bool showAddItemModal = false;
+    private bool showViewDetailsModal = false;
+    private PurchaseOrderDisplay? viewingPurchaseOrder = null;
+    private List<PurchaseOrderItem> viewingPOItems = new List<PurchaseOrderItem>();
+    private bool isLoadingDetails = false;
     private bool isSubmitting = false;
     private string errorMessage = "";
     private string successMessage = "";
@@ -358,24 +485,100 @@
 
     // Data collections
     private List<OrderItem> orderItems = new List<OrderItem>();
-    private List<PurchaseOrder> purchaseOrderHistory = new List<PurchaseOrder>();
+    private List<PurchaseOrderDisplay> purchaseOrderHistory = new List<PurchaseOrderDisplay>();
 
     // Pagination
     private int currentPage = 1;
     private int pageSize = 10;
 
     // Data collections (loaded from database)
-    private List<Supplier> suppliers = new List<Supplier>();
-    private List<Product> products = new List<Product>();
+    private List<SupplierDisplay> suppliers = new List<SupplierDisplay>();
+    private List<ProductDisplay> products = new List<ProductDisplay>();
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
         if (!AuthService.IsAuthenticated)
         {
             Navigation.NavigateTo("/");
             return;
         }
-        // Data will be loaded from database when services are implemented
+        
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            // Load suppliers from database
+            var dbSuppliers = await SupplierService.GetSuppliersAsync();
+            suppliers = dbSuppliers.Where(s => s.is_active).Select(s => new SupplierDisplay
+            {
+                Id = s.supplier_id.ToString(),
+                Name = s.supplier_name,
+                Email = s.email ?? "",
+                ContactNumber = s.contact_number ?? ""
+            }).ToList();
+
+            // Load products from database
+            var dbProducts = await ProductService.GetProductsAsync();
+            products = dbProducts.Select(p => new ProductDisplay
+            {
+                Id = p.product_id.ToString(),
+                Name = p.product_name,
+                Brand = "", // Will be loaded if needed
+                Category = "", // Will be loaded if needed
+                CostPrice = p.cost_price
+            }).ToList();
+
+            // Load purchase orders from database
+            await LoadPurchaseOrders();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading data: {ex.Message}";
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadPurchaseOrders()
+    {
+        try
+        {
+            var dbPOs = await PurchaseOrderService.GetAllPurchaseOrdersAsync();
+            purchaseOrderHistory = new List<PurchaseOrderDisplay>();
+            
+            foreach (var po in dbPOs)
+            {
+                // Get item count for this PO
+                var items = await PurchaseOrderService.GetPurchaseOrderItemsAsync(po.po_id);
+                
+                purchaseOrderHistory.Add(new PurchaseOrderDisplay
+                {
+                    POId = po.po_id,
+                    PONumber = po.po_number,
+                    SupplierName = po.supplier_name ?? "",
+                    SupplierEmail = "", // Can be loaded if needed
+                    DateOrdered = po.order_date,
+                    ExpectedDate = po.expected_date,
+                    TotalItems = items.Count,
+                    TotalAmount = po.total_amount,
+                    Status = po.status
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading purchase orders: {ex.Message}";
+            Console.WriteLine($"Error loading POs: {ex}");
+        }
+        finally
+        {
+            StateHasChanged();
+        }
     }
 
     private void ShowPurchaseOrderModal()
@@ -423,6 +626,27 @@
         newItemUnitCost = 0;
     }
 
+    private void OnProductSelected(ChangeEventArgs e)
+    {
+        selectedProductId = e.Value?.ToString() ?? "";
+        
+        // Auto-fill unit cost with product's cost price
+        if (!string.IsNullOrEmpty(selectedProductId))
+        {
+            var product = products.FirstOrDefault(p => p.Id == selectedProductId);
+            if (product != null && product.CostPrice.HasValue)
+            {
+                newItemUnitCost = product.CostPrice.Value;
+            }
+        }
+        else
+        {
+            newItemUnitCost = 0;
+        }
+        
+        StateHasChanged();
+    }
+
     private void ClearValidationErrors()
     {
         validationErrors.Clear();
@@ -465,7 +689,7 @@
         return orderItems.Sum(item => item.TotalPrice);
     }
 
-    private IEnumerable<PurchaseOrder> FilteredOrders
+    private IEnumerable<PurchaseOrderDisplay> FilteredOrders
     {
         get
         {
@@ -480,7 +704,7 @@
         }
     }
 
-    private IEnumerable<PurchaseOrder> PaginatedOrders
+    private IEnumerable<PurchaseOrderDisplay> PaginatedOrders
     {
         get
         {
@@ -580,23 +804,39 @@
                 return;
             }
 
-            await Task.Delay(1000);
-
-            var supplier = suppliers.FirstOrDefault(s => s.Id == selectedSupplierId);
-            var newOrder = new PurchaseOrder
+            // Validate supplier ID
+            if (!int.TryParse(selectedSupplierId, out int supplierId) || supplierId <= 0)
             {
-                PONumber = $"PO-{(purchaseOrderHistory.Count + 1).ToString("D3")}",
-                SupplierName = supplier?.Name ?? "",
-                SupplierEmail = supplier?.Email ?? "",
-                DateOrdered = dateOrdered,
-                ExpectedDate = expectedDate,
-                TotalItems = orderItems.Count,
-                TotalAmount = GetGrandTotal(),
-                Status = "Pending"
-            };
+                errorMessage = "Invalid supplier selected.";
+                isSubmitting = false;
+                StateHasChanged();
+                return;
+            }
 
-            purchaseOrderHistory.Insert(0, newOrder);
-            successMessage = $"Purchase Order {newOrder.PONumber} created successfully!";
+            // Convert OrderItems to PurchaseOrderItems
+            var poItems = orderItems.Select(item => new PurchaseOrderItem
+            {
+                product_id = int.Parse(item.ProductId),
+                quantity_ordered = item.Quantity,
+                unit_cost = item.UnitCost
+            }).ToList();
+
+            // Save to database
+            var poId = await PurchaseOrderService.CreatePurchaseOrderAsync(
+                supplierId,
+                dateOrdered,
+                expectedDate,
+                orderNotes,
+                poItems
+            );
+
+            successMessage = "Purchase Order created successfully!";
+            
+            // Reload purchase orders from database
+            await LoadPurchaseOrders();
+            
+            // Reset form and close modal
+            ResetForm();
             CloseModal();
             StateHasChanged();
         }
@@ -611,8 +851,8 @@
         }
     }
 
-    // Helper classes
-    private class Supplier
+    // Helper classes for display
+    private class SupplierDisplay
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
@@ -620,12 +860,13 @@
         public string ContactNumber { get; set; } = string.Empty;
     }
 
-    private class Product
+    private class ProductDisplay
     {
         public string Id { get; set; } = string.Empty;
         public string Name { get; set; } = string.Empty;
         public string Brand { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
+        public decimal? CostPrice { get; set; }
     }
 
     private class OrderItem
@@ -637,8 +878,9 @@
         public decimal TotalPrice { get; set; }
     }
 
-    private class PurchaseOrder
+    private class PurchaseOrderDisplay
     {
+        public int POId { get; set; }
         public string PONumber { get; set; } = string.Empty;
         public string SupplierName { get; set; } = string.Empty;
         public string SupplierEmail { get; set; } = string.Empty;
@@ -647,5 +889,120 @@
         public int TotalItems { get; set; }
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = "Pending";
+    }
+
+    private async Task MarkAsDelivered(PurchaseOrderDisplay order)
+    {
+        try
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to mark Purchase Order {order.PONumber} as Delivered?");
+            
+            if (!confirmed)
+                return;
+
+            var success = await PurchaseOrderService.UpdatePurchaseOrderStatusAsync(order.POId, "Delivered");
+            
+            if (success)
+            {
+                successMessage = $"Purchase Order {order.PONumber} has been marked as Delivered.";
+                await LoadPurchaseOrders();
+            }
+            else
+            {
+                errorMessage = "Failed to update purchase order status.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error marking purchase order as delivered: {ex.Message}";
+        }
+        finally
+        {
+            StateHasChanged();
+        }
+    }
+
+    private void GoToStockIn()
+    {
+        Navigation.NavigateTo("/stockin");
+    }
+
+    private string GetStatusBadgeClass(string status)
+    {
+        if (string.IsNullOrEmpty(status))
+            return "pending";
+
+        var normalized = status.ToLower().Replace(" ", "-");
+        return normalized;
+    }
+
+    private async Task ViewPurchaseOrderDetails(PurchaseOrderDisplay order)
+    {
+        try
+        {
+            showViewDetailsModal = true;
+            viewingPurchaseOrder = order;
+            isLoadingDetails = true;
+            viewingPOItems = new List<PurchaseOrderItem>();
+            StateHasChanged();
+
+            // Load full PO details from database
+            var fullPO = await PurchaseOrderService.GetPurchaseOrderByIdAsync(order.POId);
+            var items = await PurchaseOrderService.GetPurchaseOrderItemsAsync(order.POId);
+
+            // Update viewing order with full details
+            viewingPurchaseOrder.SupplierEmail = ""; // Can be loaded if needed
+            viewingPOItems = items;
+
+            isLoadingDetails = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            isLoadingDetails = false;
+            errorMessage = $"Error loading purchase order details: {ex.Message}";
+            CloseViewDetailsModal();
+        }
+    }
+
+    private void CloseViewDetailsModal()
+    {
+        showViewDetailsModal = false;
+        viewingPurchaseOrder = null;
+        viewingPOItems.Clear();
+        isLoadingDetails = false;
+        StateHasChanged();
+    }
+
+    private async Task CancelPurchaseOrder(PurchaseOrderDisplay order)
+    {
+        try
+        {
+            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
+                $"Are you sure you want to cancel Purchase Order {order.PONumber}? This action cannot be undone and the order will not be available for stock in.");
+            
+            if (!confirmed)
+                return;
+
+            var success = await PurchaseOrderService.UpdatePurchaseOrderStatusAsync(order.POId, "Cancelled");
+            
+            if (success)
+            {
+                successMessage = $"Purchase Order {order.PONumber} has been cancelled.";
+                await LoadPurchaseOrders();
+            }
+            else
+            {
+                errorMessage = "Failed to cancel purchase order.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error cancelling purchase order: {ex.Message}";
+        }
+        finally
+        {
+            StateHasChanged();
+        }
     }
 }

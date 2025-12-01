@@ -12,3 +12,4 @@ DBCC CHECKIDENT ('tbl_users', RESEED, @MaxUserId);
 PRINT 'IDENTITY seed reset. Maximum user_id is: ' + CAST(@MaxUserId AS VARCHAR(10));
 PRINT 'Next new user will have user_id: ' + CAST(@MaxUserId + 1 AS VARCHAR(10));
 
+

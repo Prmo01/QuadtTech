@@ -2,13 +2,13 @@ using System;
 
 namespace MauiApp2.Models
 {
-    public class PurchaseOrderItem
+    public class StockOutItem
     {
-        public int po_items_id { get; set; }
-        public int po_id { get; set; }
+        public int stock_out_items_id { get; set; }
+        public int stock_out_id { get; set; }
         public int product_id { get; set; }
-        public int quantity_ordered { get; set; }
-        public decimal unit_cost { get; set; }
+        public int quantity { get; set; }
+        public string reason { get; set; } = "Sale";
         public DateTime created_date { get; set; }
         
         // Display properties
@@ -16,5 +16,4 @@ namespace MauiApp2.Models
         public string? product_sku { get; set; }
     }
 }
-
 

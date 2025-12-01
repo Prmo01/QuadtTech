@@ -25,6 +25,13 @@ public static class MauiProgram
         builder.Services.AddScoped<IRoleService, RoleService>();
         builder.Services.AddScoped<ITaxService, TaxService>();
         builder.Services.AddScoped<ISupplierService, SupplierService>();
+        builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
+        builder.Services.AddScoped<IStockInService, StockInService>();
+        builder.Services.AddScoped<IStockOutService, StockOutService>();
+        builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
+        builder.Services.AddScoped<IReportService, ReportService>();
+        builder.Services.AddScoped<IDatabaseSyncService, DatabaseSyncService>();
+        builder.Services.AddScoped<IDatabaseSyncService, DatabaseSyncService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();

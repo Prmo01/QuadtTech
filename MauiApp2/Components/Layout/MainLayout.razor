@@ -36,6 +36,10 @@
     {
         <link href="css/StockIn.css" rel="stylesheet" />
     }
+    else if (CurrentPage == "stockin")
+    {
+        <link href="css/StockIn.css" rel="stylesheet" />
+    }
     else if (CurrentPage == "stockout")
     {
         <link href="css/StockOut.css" rel="stylesheet" />
@@ -51,6 +55,22 @@
       else if (CurrentPage == "category")
     {
         <link href="css/category.css" rel="stylesheet" />
+    }
+    else if (CurrentPage == "sale-transaction")
+    {
+        <link href="css/saletransaction.css" rel="stylesheet" />
+    }
+    else if (CurrentPage == "sales-history")
+    {
+        <link href="css/StockIn.css" rel="stylesheet" />
+    }
+    else if (CurrentPage == "reports")
+    {
+        <link href="css/reports.css" rel="stylesheet" />
+    }
+    else if (CurrentPage == "database-sync")
+    {
+        <link href="css/databasesync.css" rel="stylesheet" />
     }
 </head>
 <body>
@@ -74,9 +94,12 @@
         if (uri.Contains("/purchase-orders")) return "purchase-orders";
         if (uri.Contains("/stockout")) return "stockout";
         if (uri.Contains("/adjust")) return "adjust";
-         if (uri.Contains("/category")) return "category";
-         if (uri.Contains("/users")) return "users";
-          if (uri.Contains("/category")) return "category";
+        if (uri.Contains("/category")) return "category";
+        if (uri.Contains("/users")) return "users";
+        if (uri.Contains("/sale-transaction")) return "sale-transaction";
+        if (uri.Contains("/sales-history")) return "sales-history";
+        if (uri.Contains("/reports/")) return "reports";
+        if (uri.Contains("/database-sync")) return "database-sync";
         return "other";
     }
 
