@@ -80,15 +80,44 @@
 
         </div>
 
+        <!-- Reports with Dropdown - Only visible for Inventory Manager or Administrator -->
+        @if (CanAccessInventory())
+        {
+            <div class="nav-section">
+                <div class="nav-item nav-section-header @GetNavItemClass("/reports/sales-summary", "/reports/inventory", "/reports/purchase-order")" @onclick="ToggleReportsMenu">
+                    <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                    <span class="nav-text">Reports</span>
+                    <span class="nav-arrow">
+                        <i class="fas fa-chevron-down @(isReportsMenuOpen ? "open" : "")"></i>
+                    </span>
+                </div>
+                @if (isReportsMenuOpen)
+                {
+                    <div class="nav-submenu">
+                        <a href="/reports/sales-summary" class="nav-subitem @GetNavItemClass("/reports/sales-summary")">
+                            <span class="nav-subicon"><i class="fas fa-file-invoice-dollar"></i></span>
+                            <span class="nav-subtext">Sales Summary</span>
+                        </a>
+                        <a href="/reports/inventory" class="nav-subitem @GetNavItemClass("/reports/inventory")">
+                            <span class="nav-subicon"><i class="fas fa-boxes"></i></span>
+                            <span class="nav-subtext">Inventory Report</span>
+                        </a>
+                        <a href="/reports/purchase-order" class="nav-subitem @GetNavItemClass("/reports/purchase-order")">
+                            <span class="nav-subicon"><i class="fas fa-file-alt"></i></span>
+                            <span class="nav-subtext">Purchase Order Report</span>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
+
         <!-- Inventory Management with Dropdown - Only visible for Inventory Manager or Administrator -->
         @if (CanAccessInventory())
 
         {
 
             <div class="nav-section">
-
-                <div class="nav-item nav-section-header @GetNavItemClass("/products", "/purchase-orders", "/stockadjustment", "/categories", "/brands", "/taxes", "/suppliers", "/transaction")" @onclick="ToggleInventoryMenu">
-
+                <div class="nav-item nav-section-header @GetNavItemClass("/products", "/purchase-orders", "/stockin", "/stockadjustment", "/categories", "/brands", "/taxes", "/suppliers", "/sale-transaction", "/sales-history")" @onclick="ToggleInventoryMenu">
                     <span class="nav-icon"><i class="fas fa-boxes"></i></span>
 
                     <span class="nav-text">Inventory Management</span>
@@ -106,7 +135,10 @@
                 {
 
                     <div class="nav-submenu">
-
+                        <!-- Products Section -->
+                        <div class="nav-category-header">
+                            <span class="nav-category-text">Products</span>
+                        </div>
                         <a href="/products" class="nav-subitem @GetNavItemClass("/products")">
 
                             <span class="nav-subicon"><i class="fas fa-list"></i></span>
@@ -114,23 +146,6 @@
                             <span class="nav-subtext">Product List</span>
 
                         </a>
-
-                        <a href="/purchase-orders" class="nav-subitem @GetNavItemClass("/purchase-orders")">
-
-                            <span class="nav-subicon"><i class="fa-solid fa-cart-shopping"></i></span>
-
-                            <span class="nav-subtext">Purchase Order</span>
-
-                        </a>
-
-                        <a href="/stockadjustment" class="nav-subitem @GetNavItemClass("/stockadjustment")">
-
-                            <span class="nav-subicon"><i class="fas fa-exchange-alt"></i></span>
-
-                            <span class="nav-subtext">Stock Adjustment</span>
-
-                        </a>
-
                         <a href="/categories" class="nav-subitem @GetNavItemClass("/categories")">
 
                             <span class="nav-subicon"><i class="fas fa-tags"></i></span>
@@ -155,6 +170,14 @@
 
                         </a>
 
+                        <!-- Purchasing Section -->
+                        <div class="nav-category-header">
+                            <span class="nav-category-text">Purchasing</span>
+                        </div>
+                        <a href="/purchase-orders" class="nav-subitem @GetNavItemClass("/purchase-orders")">
+                            <span class="nav-subicon"><i class="fa-solid fa-cart-shopping"></i></span>
+                            <span class="nav-subtext">Purchase Order</span>
+                        </a>
                         <a href="/suppliers" class="nav-subitem @GetNavItemClass("/suppliers")">
 
                             <span class="nav-subicon"><i class="fas fa-truck"></i></span>
@@ -163,12 +186,30 @@
 
                         </a>
 
-                        <a href="/transaction" class="nav-subitem @GetNavItemClass("/transaction")">
+                        <!-- Inventory Operations Section -->
+                        <div class="nav-category-header">
+                            <span class="nav-category-text">Inventory Operations</span>
+                        </div>
+                        <a href="/stockin" class="nav-subitem @GetNavItemClass("/stockin")">
+                            <span class="nav-subicon"><i class="fas fa-box-open"></i></span>
+                            <span class="nav-subtext">Stock In</span>
+                        </a>
+                        <a href="/stockadjustment" class="nav-subitem @GetNavItemClass("/stockadjustment")">
+                            <span class="nav-subicon"><i class="fas fa-exchange-alt"></i></span>
+                            <span class="nav-subtext">Stock Adjustment</span>
+                        </a>
 
+                        <!-- Sales Section -->
+                        <div class="nav-category-header">
+                            <span class="nav-category-text">Sales</span>
+                        </div>
+                        <a href="/sale-transaction" class="nav-subitem @GetNavItemClass("/sale-transaction")">
                             <span class="nav-subicon"><i class="fas fa-receipt"></i></span>
-
-                            <span class="nav-subtext">Transaction</span>
-
+                            <span class="nav-subtext">Sale Transaction</span>
+                        </a>
+                        <a href="/sales-history" class="nav-subitem @GetNavItemClass("/sales-history")">
+                            <span class="nav-subicon"><i class="fas fa-history"></i></span>
+                            <span class="nav-subtext">Sales History</span>
                         </a>
 
                     </div>
@@ -179,16 +220,14 @@
 
         }
 
-        <!-- Reports -->
-
-        <a href="/reports" class="nav-item @GetNavItemClass("/reports")">
-
-            <span class="nav-icon"><i class="fas fa-file-alt"></i></span>
-
-            <span class="nav-text">Reports</span>
-
-        </a>
-
+        <!-- Database Sync - Only visible for Admin/Inventory Manager -->
+        @if (CanAccessInventory())
+        {
+            <a href="/database-sync" class="nav-item @GetNavItemClass("/database-sync")">
+                <span class="nav-icon"><i class="fas fa-database"></i></span>
+                <span class="nav-text">Database Sync</span>
+            </a>
+        }
     </nav>
 
     <!-- User Profile Section -->
@@ -246,7 +285,7 @@
     private bool showUserMenu = false;
 
     private bool isUserManagementMenuOpen = false;
-
+    private bool isReportsMenuOpen = false;
     private bool isInventoryMenuOpen = false;
 
     private string currentUri = string.Empty;
@@ -333,6 +372,15 @@
 
         }
 
+        // Keep Reports menu open if on any reports pages (only if user has access)
+        if (CanAccessInventory())
+        {
+            if (currentUri.Contains("/reports/"))
+            {
+                isReportsMenuOpen = true;
+            }
+        }
+
         // Keep Inventory Management menu open if on any inventory pages (only if user has access)
 
         if (CanAccessInventory())
@@ -342,7 +390,7 @@
             if (currentUri.Contains("/products") ||
 
                 currentUri.Contains("/purchase-orders") ||
-
+                currentUri.Contains("/stockin") ||
                 currentUri.Contains("/stockadjustment") ||
 
                 currentUri.Contains("/categories") ||
@@ -352,9 +400,8 @@
                 currentUri.Contains("/taxes") ||
 
                 currentUri.Contains("/suppliers") ||
-
-                currentUri.Contains("/transaction"))
-
+                currentUri.Contains("/sale-transaction") ||
+                currentUri.Contains("/sales-history"))
             {
 
                 isInventoryMenuOpen = true;
@@ -469,6 +516,11 @@
 
         isUserManagementMenuOpen = !isUserManagementMenuOpen;
 
+    }
+
+    private void ToggleReportsMenu()
+    {
+        isReportsMenuOpen = !isReportsMenuOpen;
     }
 
     private void ToggleInventoryMenu()

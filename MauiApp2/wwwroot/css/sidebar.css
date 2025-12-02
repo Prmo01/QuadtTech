@@ -165,6 +165,26 @@
     animation: slideDown 0.3s ease-out;
 }
 
+/* Category Header in Submenu */
+.nav-category-header {
+    padding: 12px 25px 8px 50px;
+    margin-top: 8px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.nav-category-header:first-child {
+    border-top: none;
+    margin-top: 0;
+}
+
+.nav-category-text {
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #9ca3af;
+}
+
 .nav-subitem {
     display: flex;
     align-items: center;

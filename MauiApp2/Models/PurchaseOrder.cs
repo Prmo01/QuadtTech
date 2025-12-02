@@ -14,6 +14,10 @@ namespace MauiApp2.Models
         public string? notes { get; set; }
         public DateTime created_date { get; set; }
         public DateTime? modified_date { get; set; }
+        
+        // Display properties
+        public string? supplier_name { get; set; }
     }
 }
+
 

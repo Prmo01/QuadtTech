@@ -1,4 +1,4 @@
-﻿﻿ /* Dashboard Layout - Matching User List Design */
+﻿ /* Dashboard Layout - Matching User List Design */
 .dashboard-wrapper {
     display: flex;
     height: 100vh;
@@ -51,7 +51,7 @@
 /* Stats Grid */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 24px;
 }
 
@@ -107,6 +107,11 @@
     color: #2563eb;
 }
 
+.product-icon-bg {
+    background-color: #ddd6fe;
+    color: #7c3aed;
+}
+
 .order-icon-bg {
     background-color: #fef3c7;
     color: #d97706;
@@ -122,6 +127,11 @@
     color: #ea580c;
 }
 
+.supplier-icon-bg {
+    background-color: #fce7f3;
+    color: #db2777;
+}
+
 .stat-value {
     font-size: 32px;
     font-weight: 700;
@@ -130,26 +140,31 @@
     line-height: 1;
 }
 
-.stat-trend {
+.stat-change {
     display: flex;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    font-weight: 600;
-    padding: 6px 12px;
-    border-radius: 8px;
-    width: fit-content;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 500;
+    color: #6b7280;
+    margin-top: 8px;
 }
 
-    .stat-trend.positive {
-        color: #059669;
-        background: rgba(16, 185, 129, 0.1);
-    }
+.stat-change.positive {
+    color: #059669;
+}
 
-    .stat-trend.negative {
-        color: #dc2626;
-        background: rgba(239, 68, 68, 0.1);
-    }
+.stat-change.negative {
+    color: #dc2626;
+}
+
+.stat-change.neutral {
+    color: #6b7280;
+}
+
+.stat-change i {
+    font-size: 10px;
+}
 
 .trend-icon {
     font-size: 12px;
@@ -208,8 +223,26 @@
     gap: 16px;
 }
 
-.period-selector {
-    padding: 8px 16px;
+.chart-date-controls {
+    display: flex;
+    align-items: end;
+    gap: 16px;
+}
+
+.chart-date-controls .form-group {
+    margin-bottom: 0;
+}
+
+.chart-date-controls .form-group label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.chart-date-controls .date-input {
+    padding: 8px 12px;
     border: 1px solid #d1d5db;
     border-radius: 8px;
     font-size: 14px;
@@ -218,17 +251,40 @@
     cursor: pointer;
     outline: none;
     transition: all 0.3s ease;
-    min-width: 140px;
+    min-width: 150px;
 }
 
-    .period-selector:hover {
-        border-color: #9ca3af;
-    }
+.chart-date-controls .date-input:hover {
+    border-color: #9ca3af;
+}
 
-    .period-selector:focus {
-        border-color: #2563eb;
-        box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
-    }
+.chart-date-controls .date-input:focus {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.chart-date-controls .btn-generate {
+    background-color: #2563eb;
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background-color 0.2s, transform 0.2s;
+    white-space: nowrap;
+    height: fit-content;
+}
+
+.chart-date-controls .btn-generate:hover {
+    background-color: #1d4ed8;
+    transform: translateY(-1px);
+}
 
 .chart-legend {
     display: flex;
@@ -329,6 +385,152 @@
     height: 100%;
 }
 
+.no-chart-data {
+    text-align: center;
+    padding: 60px 20px;
+    color: #9ca3af;
+}
+
+.no-chart-data i {
+    font-size: 48px;
+    margin-bottom: 15px;
+    opacity: 0.5;
+}
+
+.no-chart-data p {
+    font-size: 16px;
+    color: #6b7280;
+}
+
+/* Activity Section */
+.activity-section {
+    margin-top: 30px;
+}
+
+.activity-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 24px;
+}
+
+.activity-card {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+    border: 1px solid #e5e7eb;
+}
+
+.activity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px 24px;
+    border-bottom: 1px solid #e5e7eb;
+    background-color: #f9fafb;
+}
+
+.activity-header h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.view-all-link {
+    font-size: 14px;
+    color: #2563eb;
+    text-decoration: none;
+    font-weight: 500;
+    transition: color 0.2s;
+}
+
+.view-all-link:hover {
+    color: #1d4ed8;
+    text-decoration: underline;
+}
+
+.activity-list {
+    padding: 0;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 16px 24px;
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.2s;
+}
+
+.activity-item:last-child {
+    border-bottom: none;
+}
+
+.activity-item:hover {
+    background-color: #f9fafb;
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+    flex-shrink: 0;
+}
+
+.activity-icon.sales-icon {
+    background-color: #d1fae5;
+    color: #059669;
+}
+
+.activity-icon.alert-icon {
+    background-color: #fee2e2;
+    color: #dc2626;
+}
+
+.activity-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.activity-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1f2937;
+    margin-bottom: 4px;
+}
+
+.activity-meta {
+    font-size: 12px;
+    color: #6b7280;
+}
+
+.activity-amount {
+    font-size: 14px;
+    font-weight: 600;
+    color: #059669;
+    white-space: nowrap;
+}
+
+.activity-amount.stock-amount {
+    color: #dc2626;
+}
+
+.no-activity {
+    padding: 40px 24px;
+    text-align: center;
+    color: #9ca3af;
+}
+
+.no-activity p {
+    font-size: 14px;
+    margin: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 1400px) {
     .stats-grid {
@@ -357,7 +559,16 @@
 
     .chart-controls {
         width: 100%;
-        justify-content: space-between;
+    }
+
+    .chart-date-controls {
+        width: 100%;
+        flex-wrap: wrap;
+    }
+
+    .chart-date-controls .form-group {
+        flex: 1;
+        min-width: 150px;
     }
 }
 
@@ -398,13 +609,19 @@
     }
 
     .chart-controls {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 12px;
+        width: 100%;
     }
 
-    .chart-legend {
+    .chart-date-controls {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .chart-date-controls .form-group {
         width: 100%;
-        justify-content: space-between;
+    }
+
+    .chart-date-controls .btn-generate {
+        width: 100%;
     }
 }

@@ -20,3 +20,4 @@ PRINT 'Next new user will have user_id: ' + CAST(@MaxUserId + 1 AS VARCHAR(10));
 PRINT '';
 PRINT 'NOTE: User ID 1003 will remain as is. To fix this, run FixUserIdentityAndRenumber.sql instead.';
 
+
