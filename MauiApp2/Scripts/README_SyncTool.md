@@ -73,3 +73,4 @@ This tool syncs data from your LOCAL database to your CLOUD database.
 - **Identity errors**: The tool handles IDENTITY columns automatically
 - **Duplicate key errors**: The tool checks for existing rows before inserting
 
+
