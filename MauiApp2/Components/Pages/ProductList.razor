@@ -529,7 +529,7 @@
 
                 <button class="btn-cancel" @onclick="CloseAddModal">Cancel</button>
 
-                <button class="btn-submit" @onclick="AddProduct">Add Product</button>
+                <button class="btn-submit" @onclick="ShowAddProductConfirmation">Add Product</button>
 
             </div>
 
@@ -826,7 +826,7 @@
 
                 <button class="btn-cancel" @onclick="CloseEditModal">Cancel</button>
 
-                <button class="btn-submit" @onclick="UpdateProduct">Update Product</button>
+                <button class="btn-submit" @onclick="ShowUpdateProductConfirmation">Update Product</button>
 
             </div>
 
@@ -834,6 +834,70 @@
 
     </div>
 
+}
+
+<!-- Confirmation Modal for Add Product -->
+@if (showAddProductConfirmation)
+{
+    <div class="modal-overlay" @onclick="CloseAddProductConfirmation">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Add Product</h3>
+                <button class="modal-close" @onclick="CloseAddProductConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Are you sure you want to add this product?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Product Name:</strong> @newProductName</p>
+                    <p><strong>Category:</strong> @(availableCategories.FirstOrDefault(c => c.category_id == selectedCategoryId)?.category_name ?? "N/A")</p>
+                    <p><strong>Brand:</strong> @(availableBrands.FirstOrDefault(b => b.brand_id == selectedBrandId)?.brand_name ?? "N/A")</p>
+                    <p><strong>Cost Price:</strong> ₱@(newCostPrice?.ToString("N2") ?? "0.00")</p>
+                    <p><strong>Sell Price:</strong> ₱@newSellPrice.ToString("N2")</p>
+                    <p><strong>Status:</strong> @(newStatus ? "Active" : "Inactive")</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseAddProductConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmAddProduct">Confirm Add</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal for Update Product -->
+@if (showUpdateProductConfirmation)
+{
+    <div class="modal-overlay" @onclick="CloseUpdateProductConfirmation">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Update Product</h3>
+                <button class="modal-close" @onclick="CloseUpdateProductConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to update this product?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Product:</strong> @editProductName</p>
+                    <p><strong>SKU:</strong> @editSKU</p>
+                    <p><strong>Category:</strong> @(availableCategories.FirstOrDefault(c => c.category_id == editCategoryId)?.category_name ?? "N/A")</p>
+                    <p><strong>Brand:</strong> @(availableBrands.FirstOrDefault(b => b.brand_id == editBrandId)?.brand_name ?? "N/A")</p>
+                    <p><strong>Cost Price:</strong> ₱@(editCostPrice?.ToString("N2") ?? "0.00")</p>
+                    <p><strong>Sell Price:</strong> ₱@editSellPrice.ToString("N2")</p>
+                    <p><strong>Status:</strong> @(editStatus ? "Active" : "Inactive")</p>
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">This action will permanently update the product information.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseUpdateProductConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmUpdateProduct">Confirm Update</button>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
@@ -853,6 +917,10 @@
     private bool showAddModal = false;
 
     private bool showEditModal = false;
+
+    private bool showAddProductConfirmation = false;
+
+    private bool showUpdateProductConfirmation = false;
 
     private ProductDisplay? editingProduct = null;
 
@@ -1694,39 +1762,79 @@
 
     }
 
-    // CRUD Operations
-
-    private async Task AddProduct()
-
+    // Confirmation Modal Methods
+    private void ShowAddProductConfirmation()
     {
-
-        // Mark that user has attempted to submit
-
+        // Validate first
         hasAttemptedSubmit = true;
-
-        // Clear previous errors
-
         errorMessage = "";
-
         validationErrors.Clear();
-
         StateHasChanged();
-
-        // Validate form BEFORE attempting to add
 
         ValidateAddForm();
 
         if (validationErrors.Any())
-
         {
-
             errorMessage = "Please fix the validation errors before submitting.";
-
             StateHasChanged();
-
-            return; // Stop here if validation fails
-
+            return;
         }
+
+        showAddProductConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseAddProductConfirmation()
+    {
+        showAddProductConfirmation = false;
+        StateHasChanged();
+    }
+
+    private void ShowUpdateProductConfirmation()
+    {
+        // Validate first
+        hasAttemptedEditSubmit = true;
+        errorMessage = "";
+        editValidationErrors.Clear();
+        StateHasChanged();
+
+        ValidateEditForm();
+
+        if (editValidationErrors.Any())
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            StateHasChanged();
+            return;
+        }
+
+        if (editingProduct == null)
+        {
+            errorMessage = "Error: No product selected for editing.";
+            StateHasChanged();
+            return;
+        }
+
+        showUpdateProductConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateProductConfirmation()
+    {
+        showUpdateProductConfirmation = false;
+        StateHasChanged();
+    }
+
+    // CRUD Operations
+
+    private async Task ConfirmAddProduct()
+    {
+        showAddProductConfirmation = false;
+        await AddProduct();
+    }
+
+    private async Task AddProduct()
+
+    {
 
         try
 
@@ -1786,49 +1894,15 @@
 
     }
 
+    private async Task ConfirmUpdateProduct()
+    {
+        showUpdateProductConfirmation = false;
+        await UpdateProduct();
+    }
+
     private async Task UpdateProduct()
 
     {
-
-        // Mark that user has attempted to submit
-
-        hasAttemptedEditSubmit = true;
-
-        // Clear previous errors
-
-        errorMessage = "";
-
-        editValidationErrors.Clear();
-
-        StateHasChanged();
-
-        // Validate form BEFORE attempting to update
-
-        ValidateEditForm();
-
-        if (editValidationErrors.Any())
-
-        {
-
-            errorMessage = "Please fix the validation errors before submitting.";
-
-            StateHasChanged();
-
-            return; // Stop here if validation fails
-
-        }
-
-        if (editingProduct == null)
-
-        {
-
-            errorMessage = "Error: No product selected for editing.";
-
-            StateHasChanged();
-
-            return;
-
-        }
 
         try
 

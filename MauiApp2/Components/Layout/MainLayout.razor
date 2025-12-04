@@ -64,6 +64,10 @@
     {
         <link href="css/StockIn.css" rel="stylesheet" />
     }
+    else if (CurrentPage == "inventory-transactions")
+    {
+        <link href="css/StockIn.css" rel="stylesheet" />
+    }
     else if (CurrentPage == "reports")
     {
         <link href="css/reports.css" rel="stylesheet" />
@@ -74,6 +78,7 @@
     }
 </head>
 <body>
+    <AppInitializer />
     <div>
         @Body
     </div>
@@ -98,6 +103,7 @@
         if (uri.Contains("/users")) return "users";
         if (uri.Contains("/sale-transaction")) return "sale-transaction";
         if (uri.Contains("/sales-history")) return "sales-history";
+        if (uri.Contains("/inventory-transactions")) return "inventory-transactions";
         if (uri.Contains("/reports/")) return "reports";
         if (uri.Contains("/database-sync")) return "database-sync";
         return "other";

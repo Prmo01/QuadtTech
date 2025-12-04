@@ -1,0 +1,346 @@
+@page "/expenses"
+@layout MainLayout
+@using MauiApp2.Services
+@using MauiApp2.Models
+@using System.Linq
+@inject IAuthService AuthService
+@inject IExpenseService ExpenseService
+@inject NavigationManager Navigation
+
+<link href="css/accounting.css" rel="stylesheet" />
+<link href="css/pagination.css" rel="stylesheet" />
+
+<div class="dashboard-wrapper">
+    <Sidebar />
+    <div class="main-content">
+        <div class="content-header">
+            <h1>Expenses</h1>
+            <p>Record and track operational expenses</p>
+        </div>
+
+        <div class="expense-management">
+            <div class="tab-section">
+                <div class="tabs">
+                    <button class="tab active">Expense List</button>
+                </div>
+            </div>
+
+            <div class="expense-table-container">
+                <!-- Alert Messages -->
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-error">
+                        <span class="alert-icon">⚠️</span>
+                        <span>@errorMessage</span>
+                        <button class="alert-close" @onclick="ClearError">×</button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✅</span>
+                        <span>@successMessage</span>
+                        <button class="alert-close" @onclick="ClearSuccess">×</button>
+                    </div>
+                }
+
+                @if (isLoading)
+                {
+                    <div class="loading-indicator">
+                        <div class="spinner"></div>
+                        <span>Loading expenses...</span>
+                    </div>
+                }
+
+                <div class="expense-toolbar">
+                    <button class="btn-primary" @onclick="ShowAddModal">
+                        <i class="fas fa-plus"></i> Record Expense
+                    </button>
+                </div>
+
+                @if (expenses != null && expenses.Any())
+                {
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Category</th>
+                                    <th>Description</th>
+                                    <th>Amount</th>
+                                    <th>Payment Method</th>
+                                    <th>Reference</th>
+                                    <th>Created By</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var expense in paginatedExpenses)
+                                {
+                                    <tr>
+                                        <td>@expense.expense_date.ToString("MM/dd/yyyy")</td>
+                                        <td>@expense.category</td>
+                                        <td>@expense.description</td>
+                                        <td><strong>₱@expense.amount.ToString("N2")</strong></td>
+                                        <td>@expense.payment_method</td>
+                                        <td>@(expense.reference_number ?? "-")</td>
+                                        <td>@(expense.created_by_name ?? "Unknown")</td>
+                                        <td>
+                                            <button class="btn-icon" @onclick="() => EditExpense(expense)" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (filteredExpenses.Any())
+                    {
+                        <Pagination CurrentPage="@currentPage"
+                                    PageSize="@pageSize"
+                                    TotalItems="@filteredExpenses.Count()"
+                                    PageChanged="@OnPageChanged"
+                                    PageSizeChanged="@OnPageSizeChanged" />
+                    }
+
+                    <div class="summary-card">
+                        <h3>Summary</h3>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Expenses:</span>
+                                <span class="summary-value">₱@totalExpenses.ToString("N2")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (!isLoading)
+                {
+                    <div class="empty-state">
+                        <p>No expenses recorded. Click "Record Expense" to add one.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(editingExpense != null ? "Edit Expense" : "Record Expense")</h3>
+                <button class="modal-close" @onclick="CloseModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Expense Date *</label>
+                    <input type="date" class="form-control" @bind="newExpenseDate" />
+                </div>
+                <div class="form-group">
+                    <label>Category *</label>
+                    <select class="form-control" @bind="newCategory">
+                        <option value="">Select Category</option>
+                        <option value="Rent">Rent</option>
+                        <option value="Utilities">Utilities</option>
+                        <option value="Salaries">Salaries</option>
+                        <option value="Supplies">Supplies</option>
+                        <option value="Marketing">Marketing</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description *</label>
+                    <textarea class="form-control" @bind="newDescription" rows="3" placeholder="Describe the expense"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>Amount *</label>
+                    <input type="number" class="form-control" @bind="newAmount" step="0.01" min="0.01" />
+                </div>
+                <div class="form-group">
+                    <label>Payment Method *</label>
+                    <select class="form-control" @bind="newPaymentMethod">
+                        <option value="">Select Method</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="GCash">GCash</option>
+                        <option value="PayMaya">PayMaya</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Reference Number</label>
+                    <input type="text" class="form-control" @bind="newReferenceNumber" placeholder="Receipt #, Invoice #, etc." />
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+                <button class="btn-primary" @onclick="SaveExpense" disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Save")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<Expense>? expenses;
+    private Expense? editingExpense;
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    private DateTime newExpenseDate = DateTime.Today;
+    private string newCategory = string.Empty;
+    private string newDescription = string.Empty;
+    private decimal newAmount = 0;
+    private string newPaymentMethod = string.Empty;
+    private string? newReferenceNumber = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExpenses();
+    }
+
+    private async Task LoadExpenses()
+    {
+        try
+        {
+            isLoading = true;
+            currentPage = 1; // Reset to first page when data is reloaded
+            expenses = await ExpenseService.GetExpensesAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading expenses: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<Expense> filteredExpenses => expenses ?? new List<Expense>();
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+    private IEnumerable<Expense> paginatedExpenses => filteredExpenses
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private decimal totalExpenses => filteredExpenses.Sum(e => e.amount);
+
+    private void ShowAddModal()
+    {
+        editingExpense = null;
+        newExpenseDate = DateTime.Today;
+        newCategory = string.Empty;
+        newDescription = string.Empty;
+        newAmount = 0;
+        newPaymentMethod = string.Empty;
+        newReferenceNumber = string.Empty;
+        showModal = true;
+    }
+
+    private void EditExpense(Expense expense)
+    {
+        editingExpense = expense;
+        newExpenseDate = expense.expense_date;
+        newCategory = expense.category;
+        newDescription = expense.description;
+        newAmount = expense.amount;
+        newPaymentMethod = expense.payment_method;
+        newReferenceNumber = expense.reference_number;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        editingExpense = null;
+    }
+
+    private async Task SaveExpense()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newCategory) || 
+                string.IsNullOrWhiteSpace(newDescription) || 
+                newAmount <= 0 ||
+                string.IsNullOrWhiteSpace(newPaymentMethod))
+            {
+                errorMessage = "Please fill in all required fields.";
+                return;
+            }
+
+            isSaving = true;
+            ClearMessages();
+
+            var expense = new Expense
+            {
+                expense_date = newExpenseDate,
+                category = newCategory.Trim(),
+                description = newDescription.Trim(),
+                amount = newAmount,
+                payment_method = newPaymentMethod,
+                reference_number = string.IsNullOrWhiteSpace(newReferenceNumber) ? null : newReferenceNumber.Trim(),
+                created_by = AuthService.CurrentUserId
+            };
+
+            if (editingExpense != null)
+            {
+                expense.expense_id = editingExpense.expense_id;
+                await ExpenseService.UpdateExpenseAsync(expense);
+                successMessage = "Expense updated successfully!";
+            }
+            else
+            {
+                await ExpenseService.CreateExpenseAsync(expense);
+                successMessage = "Expense recorded successfully!";
+            }
+
+            await LoadExpenses();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving expense: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearError() => errorMessage = string.Empty;
+    private void ClearSuccess() => successMessage = string.Empty;
+    private void ClearMessages()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+}
+

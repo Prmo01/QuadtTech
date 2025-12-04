@@ -12,6 +12,7 @@ namespace MauiApp2.Services
         Task<int> ReceiveStockFromPurchaseOrderAsync(int poId, List<StockInItem> items, string? notes, int userId);
         Task<List<StockIn>> GetStockInHistoryAsync();
         Task<StockIn> GetStockInByIdAsync(int stockInId);
+        Task<List<StockInItem>> GetStockInItemsAsync(int stockInId);
     }
 
     public class StockInService : IStockInService
@@ -57,7 +58,20 @@ namespace MauiApp2.Services
                     await UpdateProductInventoryAsync(connection, transaction, item.product_id, item.quantity_received, item.unit_cost);
                 }
 
-                // Step 5: Update PO status to "Received"
+                // Step 5: Calculate total cost for Accounts Payable
+                decimal totalCost = 0;
+                foreach (var item in items)
+                {
+                    totalCost += item.quantity_received * item.unit_cost;
+                }
+
+                // Step 6: Create Accounts Payable record
+                await CreateAccountsPayableAsync(connection, transaction, poId, supplierId, totalCost);
+
+                // Step 7: Create automatic accounting ledger entries
+                await CreateStockInLedgerEntriesAsync(connection, transaction, stockInId, stockInNumber, totalCost, items, userId);
+
+                // Step 8: Update PO status to "Received"
                 var updatePOCommand = new SqlCommand(@"
                     UPDATE tbl_purchase_order 
                     SET status = @status, modified_date = @modified_date
@@ -310,6 +324,201 @@ namespace MauiApp2.Services
             }
 
             throw new Exception("Stock In not found");
+        }
+
+        // Get Stock In items
+        public async Task<List<StockInItem>> GetStockInItemsAsync(int stockInId)
+        {
+            var items = new List<StockInItem>();
+
+            try
+            {
+                using var connection = db.GetConnection();
+                await connection.OpenAsync();
+
+                // Check if columns exist
+                bool hasQuantityRejected = await ColumnExistsAsync(connection, null, "tbl_stock_in_items", "quantity_rejected");
+                bool hasRejectionReason = await ColumnExistsAsync(connection, null, "tbl_stock_in_items", "rejection_reason");
+                bool hasRejectionRemarks = await ColumnExistsAsync(connection, null, "tbl_stock_in_items", "rejection_remarks");
+
+                string selectColumns = "sii.stock_in_items_id, sii.stock_in_id, sii.product_id, sii.quantity_received, sii.unit_cost, sii.created_date";
+                if (hasQuantityRejected) selectColumns += ", sii.quantity_rejected";
+                else selectColumns += ", 0 as quantity_rejected";
+                if (hasRejectionReason) selectColumns += ", sii.rejection_reason";
+                else selectColumns += ", NULL as rejection_reason";
+                if (hasRejectionRemarks) selectColumns += ", sii.rejection_remarks";
+                else selectColumns += ", NULL as rejection_remarks";
+                selectColumns += ", p.product_name, p.product_sku";
+
+                var command = new SqlCommand($@"
+                    SELECT {selectColumns}
+                    FROM tbl_stock_in_items sii
+                    INNER JOIN tbl_product p ON sii.product_id = p.product_id
+                    WHERE sii.stock_in_id = @stock_in_id
+                    ORDER BY sii.stock_in_items_id", connection);
+
+                command.Parameters.AddWithValue("@stock_in_id", stockInId);
+
+                using var reader = await command.ExecuteReaderAsync();
+                while (await reader.ReadAsync())
+                {
+                    int index = 0;
+                    var item = new StockInItem
+                    {
+                        stock_in_items_id = reader.GetInt32(index++),
+                        stock_in_id = reader.GetInt32(index++),
+                        product_id = reader.GetInt32(index++),
+                        quantity_received = reader.GetInt32(index++),
+                        unit_cost = reader.GetDecimal(index++),
+                        created_date = reader.GetDateTime(index++)
+                    };
+
+                    if (hasQuantityRejected)
+                    {
+                        item.quantity_rejected = reader.IsDBNull(index) ? 0 : reader.GetInt32(index++);
+                    }
+                    else
+                    {
+                        index++; // Skip the 0 placeholder
+                    }
+
+                    if (hasRejectionReason)
+                    {
+                        item.rejection_reason = reader.IsDBNull(index) ? null : reader.GetString(index++);
+                    }
+                    else
+                    {
+                        index++; // Skip the NULL placeholder
+                    }
+
+                    if (hasRejectionRemarks)
+                    {
+                        item.rejection_remarks = reader.IsDBNull(index) ? null : reader.GetString(index++);
+                    }
+                    else
+                    {
+                        index++; // Skip the NULL placeholder
+                    }
+
+                    item.product_name = reader.IsDBNull(index) ? null : reader.GetString(index++);
+                    item.product_sku = reader.IsDBNull(index) ? null : reader.GetString(index++);
+
+                    items.Add(item);
+                }
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"Error loading stock in items: {ex.Message}");
+            }
+
+            return items;
+        }
+
+        // Create Accounts Payable record
+        private async Task CreateAccountsPayableAsync(SqlConnection connection, SqlTransaction transaction, int poId, int supplierId, decimal totalAmount)
+        {
+            try
+            {
+                // Check if AP already exists for this PO
+                var checkCommand = new SqlCommand(@"
+                    SELECT COUNT(*) FROM tbl_accounts_payable WHERE po_id = @po_id", connection, transaction);
+                checkCommand.Parameters.AddWithValue("@po_id", poId);
+                var exists = (int)await checkCommand.ExecuteScalarAsync() > 0;
+
+                if (!exists)
+                {
+                    var command = new SqlCommand(@"
+                        INSERT INTO tbl_accounts_payable 
+                        (po_id, supplier_id, total_amount, paid_amount, status, created_date)
+                        VALUES 
+                        (@po_id, @supplier_id, @total_amount, 0, 'Unpaid', GETDATE())", connection, transaction);
+
+                    command.Parameters.AddWithValue("@po_id", poId);
+                    command.Parameters.AddWithValue("@supplier_id", supplierId);
+                    command.Parameters.AddWithValue("@total_amount", totalAmount);
+
+                    await command.ExecuteNonQueryAsync();
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the stock in
+                Console.WriteLine($"Error creating accounts payable: {ex.Message}");
+            }
+        }
+
+        // Create automatic ledger entries for stock in
+        private async Task CreateStockInLedgerEntriesAsync(SqlConnection connection, SqlTransaction transaction, int stockInId, string stockInNumber, decimal totalCost, List<StockInItem> items, int userId)
+        {
+            try
+            {
+                // Get account IDs
+                int inventoryAccountId = await GetAccountIdByCodeAsync(connection, transaction, "1002"); // Inventory
+                int apAccountId = await GetAccountIdByCodeAsync(connection, transaction, "2001"); // Accounts Payable
+
+                // If accounts don't exist, skip accounting
+                if (inventoryAccountId == 0 || apAccountId == 0)
+                {
+                    Console.WriteLine("Warning: Chart of Accounts not set up. Skipping automatic ledger entries.");
+                    return;
+                }
+
+                // Create ledger entries for total cost
+                // Inventory Debit (increase inventory value)
+                await CreateLedgerEntryAsync(connection, transaction, inventoryAccountId, totalCost, 0,
+                    $"Stock In {stockInNumber}", "Purchase", stockInId, userId);
+
+                // Accounts Payable Credit (increase debt)
+                await CreateLedgerEntryAsync(connection, transaction, apAccountId, 0, totalCost,
+                    $"Stock In {stockInNumber}", "Purchase", stockInId, userId);
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the stock in
+                Console.WriteLine($"Error creating ledger entries: {ex.Message}");
+            }
+        }
+
+        // Helper: Get account ID by code
+        private async Task<int> GetAccountIdByCodeAsync(SqlConnection connection, SqlTransaction transaction, string accountCode)
+        {
+            try
+            {
+                var command = new SqlCommand(@"
+                    SELECT account_id FROM tbl_chart_of_accounts 
+                    WHERE account_code = @account_code AND is_active = 1", connection, transaction);
+                command.Parameters.AddWithValue("@account_code", accountCode);
+
+                var result = await command.ExecuteScalarAsync();
+                return result != null && result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            }
+            catch
+            {
+                return 0;
+            }
+        }
+
+        // Helper: Create ledger entry within transaction
+        private async Task CreateLedgerEntryAsync(SqlConnection connection, SqlTransaction transaction, int accountId,
+            decimal debitAmount, decimal creditAmount, string description, string referenceType, int referenceId, int createdBy)
+        {
+            var command = new SqlCommand(@"
+                INSERT INTO tbl_general_ledger 
+                (transaction_date, account_id, debit_amount, credit_amount, description, 
+                 reference_type, reference_id, created_by, created_date)
+                VALUES 
+                (GETDATE(), @account_id, @debit_amount, @credit_amount, @description,
+                 @reference_type, @reference_id, @created_by, GETDATE())", connection, transaction);
+
+            command.Parameters.AddWithValue("@account_id", accountId);
+            command.Parameters.AddWithValue("@debit_amount", debitAmount);
+            command.Parameters.AddWithValue("@credit_amount", creditAmount);
+            command.Parameters.AddWithValue("@description", description);
+            command.Parameters.AddWithValue("@reference_type", referenceType);
+            command.Parameters.AddWithValue("@reference_id", referenceId);
+            command.Parameters.AddWithValue("@created_by", createdBy);
+
+            await command.ExecuteNonQueryAsync();
         }
     }
 }

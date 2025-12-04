@@ -445,7 +445,7 @@
 
                 <button class="supplier-btn-cancel" @onclick="CloseAddModal" disabled="@isLoading">Cancel</button>
 
-                <button class="supplier-btn-submit" @onclick="AddSupplier" disabled="@isLoading">
+                <button class="supplier-btn-submit" @onclick="ShowAddSupplierConfirmation" disabled="@isLoading">
 
                     @if (isLoading)
 
@@ -602,7 +602,7 @@
 
                 <button class="supplier-btn-cancel" @onclick="CloseEditModal" disabled="@isLoading">Cancel</button>
 
-                <button class="supplier-btn-submit" @onclick="UpdateSupplier" disabled="@isLoading">
+                <button class="supplier-btn-submit" @onclick="ShowUpdateSupplierConfirmation" disabled="@isLoading">
 
                     @if (isLoading)
 
@@ -624,6 +624,65 @@
 
 }
 
+<!-- Confirmation Modal for Add Supplier -->
+@if (showAddSupplierConfirmation)
+{
+    <div class="modal-overlay" style="z-index: 3000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;" @onclick="CloseAddSupplierConfirmation">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; max-width: 500px; width: 90%;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Add Supplier</h3>
+                <button class="modal-close" @onclick="CloseAddSupplierConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Are you sure you want to add this supplier?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Supplier Name:</strong> @newSupplierName</p>
+                    <p><strong>Contact Number:</strong> @(string.IsNullOrWhiteSpace(newContactNumber) ? "N/A" : newContactNumber)</p>
+                    <p><strong>Email:</strong> @(string.IsNullOrWhiteSpace(newEmail) ? "N/A" : newEmail)</p>
+                    <p><strong>Status:</strong> @(newIsActive ? "Active" : "Inactive")</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseAddSupplierConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmAddSupplier">Confirm Add</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal for Update Supplier -->
+@if (showUpdateSupplierConfirmation)
+{
+    <div class="modal-overlay" style="z-index: 3000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;" @onclick="CloseUpdateSupplierConfirmation">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; max-width: 500px; width: 90%;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Update Supplier</h3>
+                <button class="modal-close" @onclick="CloseUpdateSupplierConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to update this supplier?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Supplier Name:</strong> @editSupplierName</p>
+                    <p><strong>Contact Number:</strong> @(string.IsNullOrWhiteSpace(editContactNumber) ? "N/A" : editContactNumber)</p>
+                    <p><strong>Email:</strong> @(string.IsNullOrWhiteSpace(editEmail) ? "N/A" : editEmail)</p>
+                    <p><strong>Status:</strong> @(editIsActive ? "Active" : "Inactive")</p>
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">This action will permanently update the supplier information.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseUpdateSupplierConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmUpdateSupplier">Confirm Update</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
 
     private string searchQuery = "";
@@ -633,6 +692,10 @@
     private bool showAddModal = false;
 
     private bool showEditModal = false;
+
+    private bool showAddSupplierConfirmation = false;
+
+    private bool showUpdateSupplierConfirmation = false;
 
     private SupplierModel? editingSupplier = null;
 
@@ -1220,39 +1283,82 @@
 
     }
 
-    // CRUD Operations
-
-    private async Task AddSupplier()
-
+    // Confirmation Modal Methods
+    private void ShowAddSupplierConfirmation()
     {
-
-        // Mark that user has attempted to submit
-
+        Console.WriteLine("ShowAddSupplierConfirmation called");
         hasAttemptedSubmit = true;
-
-        // Clear previous messages
-
         errorMessage = "";
-
         validationErrors.Clear();
-
         StateHasChanged();
-
-        // Validate form BEFORE attempting to add
 
         ValidateAddForm();
 
         if (validationErrors.Any())
-
         {
-
             errorMessage = "Please fix the validation errors before submitting.";
-
+            Console.WriteLine($"Validation failed. Errors: {string.Join(", ", validationErrors)}");
             StateHasChanged();
-
-            return; // Stop here if validation fails
-
+            return;
         }
+
+        Console.WriteLine("Validation passed, showing confirmation modal");
+        showAddSupplierConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseAddSupplierConfirmation()
+    {
+        showAddSupplierConfirmation = false;
+        StateHasChanged();
+    }
+
+    private void ShowUpdateSupplierConfirmation()
+    {
+        hasAttemptedEditSubmit = true;
+        errorMessage = "";
+        editValidationErrors.Clear();
+        StateHasChanged();
+
+        ValidateEditForm();
+
+        if (editValidationErrors.Any())
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            StateHasChanged();
+            return;
+        }
+
+        if (editingSupplier == null)
+        {
+            errorMessage = "Error: No supplier selected for editing.";
+            StateHasChanged();
+            return;
+        }
+
+        showUpdateSupplierConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateSupplierConfirmation()
+    {
+        showUpdateSupplierConfirmation = false;
+        StateHasChanged();
+    }
+
+    // CRUD Operations
+
+    private async Task ConfirmAddSupplier()
+    {
+        Console.WriteLine("ConfirmAddSupplier called");
+        showAddSupplierConfirmation = false;
+        StateHasChanged();
+        await AddSupplier();
+    }
+
+    private async Task AddSupplier()
+
+    {
 
         try
 
@@ -1294,6 +1400,11 @@
 
             errorMessage = $"Error adding supplier: {ex.Message}";
 
+            Console.WriteLine($"AddSupplier error: {ex}");
+
+            // Keep the add modal open if there's an error
+            // Don't close it so user can see the error and retry
+
         }
 
         finally
@@ -1308,49 +1419,15 @@
 
     }
 
+    private async Task ConfirmUpdateSupplier()
+    {
+        showUpdateSupplierConfirmation = false;
+        await UpdateSupplier();
+    }
+
     private async Task UpdateSupplier()
 
     {
-
-        // Mark that user has attempted to submit
-
-        hasAttemptedEditSubmit = true;
-
-        // Clear previous messages
-
-        errorMessage = "";
-
-        editValidationErrors.Clear();
-
-        StateHasChanged();
-
-        // Validate form BEFORE attempting to update
-
-        ValidateEditForm();
-
-        if (editValidationErrors.Any())
-
-        {
-
-            errorMessage = "Please fix the validation errors before submitting.";
-
-            StateHasChanged();
-
-            return; // Stop here if validation fails
-
-        }
-
-        if (editingSupplier == null)
-
-        {
-
-            errorMessage = "Error: No supplier selected for editing.";
-
-            StateHasChanged();
-
-            return;
-
-        }
 
         try
 

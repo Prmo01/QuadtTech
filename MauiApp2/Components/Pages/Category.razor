@@ -125,6 +125,8 @@
 
                             <th>Category ID</th>
 
+                            <th>Code</th>
+
                             <th>Category Name</th>
 
                             <th>Description</th>
@@ -148,6 +150,8 @@
                                 <tr>
 
                                     <td>@category.category_id</td>
+
+                                    <td><strong>@(category.category_code ?? "N/A")</strong></td>
 
                                     <td>@category.category_name</td>
 
@@ -199,7 +203,7 @@
 
                             <tr>
 
-                                <td colspan="4" style="text-align: center; padding: 40px; color: #6b7280;">
+                                <td colspan="5" style="text-align: center; padding: 40px; color: #6b7280;">
 
                                     @if (string.IsNullOrWhiteSpace(searchQuery))
 
@@ -296,6 +300,31 @@
 
                     <div class="brand-form-group">
 
+                        <label>Category Code</label>
+
+                        <input type="text"
+                               class="brand-form-control @(hasAttemptedSubmit && HasError("CategoryCode") ? "input-error" : "")"
+                               @bind="newCategoryCode"
+                               @bind:event="oninput"
+                               placeholder="Auto-generated if left empty (max 4 chars)"
+                               maxlength="10"
+                               style="text-transform: uppercase;"
+                               disabled="@isLoading" />
+
+                        <small style="color: #6b7280; font-size: 0.875rem;">Leave empty to auto-generate from name</small>
+
+                        @if (hasAttemptedSubmit && HasError("CategoryCode"))
+
+                        {
+
+                            <span class="brand-field-error">@GetError("CategoryCode")</span>
+
+                        }
+
+                    </div>
+
+                    <div class="brand-form-group">
+
                         <label>Category Name *</label>
 
                         <input type="text"
@@ -344,7 +373,7 @@
 
                 <button class="brand-btn-cancel" @onclick="CloseAddModal" disabled="@isLoading">Cancel</button>
 
-                <button class="brand-btn-submit" @onclick="AddCategory" disabled="@isLoading">
+                <button class="brand-btn-submit" @onclick="ShowAddCategoryConfirmation" disabled="@isLoading">
 
                     @if (isLoading)
 
@@ -414,6 +443,29 @@
 
                     <div class="brand-form-group">
 
+                        <label>Category Code</label>
+
+                        <input type="text"
+                               class="brand-form-control @(hasAttemptedEditSubmit && HasEditError("CategoryCode") ? "input-error" : "")"
+                               @bind="editCategoryCode"
+                               @bind:event="oninput"
+                               placeholder="Category code (max 10 chars)"
+                               maxlength="10"
+                               style="text-transform: uppercase;"
+                               disabled="@isLoading" />
+
+                        @if (hasAttemptedEditSubmit && HasEditError("CategoryCode"))
+
+                        {
+
+                            <span class="brand-field-error">@GetEditError("CategoryCode")</span>
+
+                        }
+
+                    </div>
+
+                    <div class="brand-form-group">
+
                         <label>Category Name *</label>
 
                         <input type="text"
@@ -462,7 +514,7 @@
 
                 <button class="brand-btn-cancel" @onclick="CloseEditModal" disabled="@isLoading">Cancel</button>
 
-                <button class="brand-btn-submit" @onclick="UpdateCategory" disabled="@isLoading">
+                <button class="brand-btn-submit" @onclick="ShowUpdateCategoryConfirmation" disabled="@isLoading">
 
                     @if (isLoading)
 
@@ -484,6 +536,63 @@
 
 }
 
+<!-- Confirmation Modal for Add Category -->
+@if (showAddCategoryConfirmation)
+{
+    <div class="modal-overlay" style="z-index: 3000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;" @onclick="CloseAddCategoryConfirmation">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; max-width: 500px; width: 90%;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Add Category</h3>
+                <button class="modal-close" @onclick="CloseAddCategoryConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Are you sure you want to add this category?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Category Code:</strong> @(string.IsNullOrWhiteSpace(newCategoryCode) ? "N/A" : newCategoryCode.ToUpper())</p>
+                    <p><strong>Category Name:</strong> @newCategoryName</p>
+                    <p><strong>Description:</strong> @(string.IsNullOrWhiteSpace(newDescription) ? "N/A" : newDescription)</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseAddCategoryConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmAddCategory">Confirm Add</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal for Update Category -->
+@if (showUpdateCategoryConfirmation)
+{
+    <div class="modal-overlay" style="z-index: 3000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;" @onclick="CloseUpdateCategoryConfirmation">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; max-width: 500px; width: 90%;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Update Category</h3>
+                <button class="modal-close" @onclick="CloseUpdateCategoryConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to update this category?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Category Code:</strong> @(string.IsNullOrWhiteSpace(editCategoryCode) ? "N/A" : editCategoryCode.ToUpper())</p>
+                    <p><strong>Category Name:</strong> @editCategoryName</p>
+                    <p><strong>Description:</strong> @(string.IsNullOrWhiteSpace(editDescription) ? "N/A" : editDescription)</p>
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">This action will permanently update the category information.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseUpdateCategoryConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmUpdateCategory">Confirm Update</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
 
     private string searchQuery = "";
@@ -493,6 +602,10 @@
     private bool showAddModal = false;
 
     private bool showEditModal = false;
+
+    private bool showAddCategoryConfirmation = false;
+
+    private bool showUpdateCategoryConfirmation = false;
 
     private MauiApp2.Models.Category? editingCategory = null;
 
@@ -506,11 +619,15 @@
 
     // Add form fields
 
+    private string newCategoryCode = "";
+
     private string newCategoryName = "";
 
     private string newDescription = "";
 
     // Edit form fields
+
+    private string editCategoryCode = "";
 
     private string editCategoryName = "";
 
@@ -652,6 +769,8 @@
 
                 c.category_name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
 
+                (c.category_code != null && c.category_code.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
+
                 (c.description != null && c.description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
 
                 c.category_id.ToString().Contains(searchQuery, StringComparison.OrdinalIgnoreCase));
@@ -754,6 +873,8 @@
 
         // Populate edit form
 
+        editCategoryCode = category.category_code ?? "";
+
         editCategoryName = category.category_name;
 
         editDescription = category.description ?? "";
@@ -784,6 +905,8 @@
 
     {
 
+        newCategoryCode = "";
+
         newCategoryName = "";
 
         newDescription = "";
@@ -797,6 +920,8 @@
     private void ResetEditForm()
 
     {
+
+        editCategoryCode = "";
 
         editCategoryName = "";
 
@@ -858,6 +983,32 @@
 
         }
 
+        // Validate code if provided
+
+        if (!string.IsNullOrWhiteSpace(newCategoryCode))
+
+        {
+
+            var code = newCategoryCode.Trim().ToUpper();
+
+            if (code.Length > 10)
+
+            {
+
+                AddValidationError("CategoryCode", "Category code must be 10 characters or less");
+
+            }
+
+            else if (categories.Any(c => c.category_code != null && c.category_code.Equals(code, StringComparison.OrdinalIgnoreCase)))
+
+            {
+
+                AddValidationError("CategoryCode", "Category code already exists");
+
+            }
+
+        }
+
     }
 
     private void ValidateEditForm()
@@ -887,6 +1038,32 @@
         {
 
             AddEditValidationError("CategoryName", "Category name already exists");
+
+        }
+
+        // Validate code if provided
+
+        if (!string.IsNullOrWhiteSpace(editCategoryCode))
+
+        {
+
+            var code = editCategoryCode.Trim().ToUpper();
+
+            if (code.Length > 10)
+
+            {
+
+                AddEditValidationError("CategoryCode", "Category code must be 10 characters or less");
+
+            }
+
+            else if (categories.Any(c => c.category_code != null && c.category_code.Equals(code, StringComparison.OrdinalIgnoreCase) && c.category_id != editingCategory?.category_id))
+
+            {
+
+                AddEditValidationError("CategoryCode", "Category code already exists");
+
+            }
 
         }
 
@@ -984,41 +1161,83 @@
 
     }
 
-    // CRUD Operations
-
-    private async Task AddCategory()
-
+    // Confirmation Modal Methods
+    private void ShowAddCategoryConfirmation()
     {
-
-        // Mark that user has attempted to submit
-
+        Console.WriteLine("ShowAddCategoryConfirmation called");
         hasAttemptedSubmit = true;
-
-        // Clear previous messages
-
         errorMessage = "";
-
         validationErrors.Clear();
-
         StateHasChanged();
-
-        // Validate form BEFORE attempting to add
 
         ValidateAddForm();
 
         if (validationErrors.Any())
-
         {
-
             errorMessage = "Please fix the validation errors before submitting.";
-
             Console.WriteLine($"Validation failed. Errors: {string.Join(", ", validationErrors)}");
-
             StateHasChanged();
-
-            return; // Stop here if validation fails
-
+            return;
         }
+
+        Console.WriteLine("Validation passed, showing confirmation modal");
+        showAddCategoryConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseAddCategoryConfirmation()
+    {
+        showAddCategoryConfirmation = false;
+        StateHasChanged();
+    }
+
+    private void ShowUpdateCategoryConfirmation()
+    {
+        hasAttemptedEditSubmit = true;
+        errorMessage = "";
+        editValidationErrors.Clear();
+        StateHasChanged();
+
+        ValidateEditForm();
+
+        if (editValidationErrors.Any())
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            StateHasChanged();
+            return;
+        }
+
+        if (editingCategory == null)
+        {
+            errorMessage = "Error: No category selected for editing.";
+            StateHasChanged();
+            return;
+        }
+
+        showUpdateCategoryConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateCategoryConfirmation()
+    {
+        showUpdateCategoryConfirmation = false;
+        StateHasChanged();
+    }
+
+    // CRUD Operations
+
+    private async Task ConfirmAddCategory()
+    {
+        Console.WriteLine("ConfirmAddCategory called");
+        showAddCategoryConfirmation = false;
+        // Keep add modal open during the operation
+        StateHasChanged();
+        await AddCategory();
+    }
+
+    private async Task AddCategory()
+
+    {
 
         try
 
@@ -1049,6 +1268,8 @@
             var newCategory = new MauiApp2.Models.Category
 
             {
+
+                category_code = string.IsNullOrWhiteSpace(newCategoryCode) ? null : newCategoryCode.Trim().ToUpper(),
 
                 category_name = newCategoryName.Trim(),
 
@@ -1112,6 +1333,9 @@
 
             }
 
+            // Keep the add modal open if there's an error
+            // Don't close it so user can see the error and retry
+
         }
 
         finally
@@ -1126,51 +1350,15 @@
 
     }
 
+    private async Task ConfirmUpdateCategory()
+    {
+        showUpdateCategoryConfirmation = false;
+        await UpdateCategory();
+    }
+
     private async Task UpdateCategory()
 
     {
-
-        // Mark that user has attempted to submit
-
-        hasAttemptedEditSubmit = true;
-
-        // Clear previous messages
-
-        errorMessage = "";
-
-        editValidationErrors.Clear();
-
-        StateHasChanged();
-
-        // Validate form BEFORE attempting to update
-
-        ValidateEditForm();
-
-        if (editValidationErrors.Any())
-
-        {
-
-            errorMessage = "Please fix the validation errors before submitting.";
-
-            Console.WriteLine($"Validation failed. Errors: {string.Join(", ", editValidationErrors)}");
-
-            StateHasChanged();
-
-            return; // Stop here if validation fails
-
-        }
-
-        if (editingCategory == null)
-
-        {
-
-            errorMessage = "Error: No category selected for editing.";
-
-            StateHasChanged();
-
-            return;
-
-        }
 
         try
 
@@ -1203,6 +1391,8 @@
             {
 
                 category_id = editingCategory.category_id,
+
+                category_code = string.IsNullOrWhiteSpace(editCategoryCode) ? null : editCategoryCode.Trim().ToUpper(),
 
                 category_name = editCategoryName.Trim(),
 

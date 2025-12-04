@@ -12,6 +12,7 @@ using System.ComponentModel.DataAnnotations.Schema;
     {
         public int category_id { get; set; }
         public string category_name { get; set; } = string.Empty;
+        public string category_code { get; set; } = string.Empty; // 3-4 character code for SKU generation
         public string? description { get; set; }
     }
 }

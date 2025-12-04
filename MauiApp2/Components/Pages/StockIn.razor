@@ -3,12 +3,14 @@
 @using MauiApp2.Services
 @using MauiApp2.Models
 @using SupplierModel = MauiApp2.Models.Supplier
+@using TaxModel = MauiApp2.Models.Tax
 @using Microsoft.JSInterop
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
 @inject ISupplierService SupplierService
 @inject IProductService ProductService
 @inject IPurchaseOrderService PurchaseOrderService
+@inject ITaxService TaxService
 @inject IJSRuntime JSRuntime
 
 <link href="css/pagination.css" rel="stylesheet" />
@@ -71,6 +73,8 @@
                             <th>Date Ordered</th>
                             <th>Expected Date</th>
                             <th>Total Items</th>
+                            <th>Subtotal</th>
+                            <th>Tax</th>
                             <th>Total Amount</th>
                             <th>Status</th>
                             <th>Actions</th>
@@ -85,13 +89,18 @@
                                     <td>@order.PONumber</td>
                                     <td>
                                         <div class="supplier-info">
-                                            <div class="supplier-name">@order.SupplierName</div>
-                                            <div class="supplier-email">@order.SupplierEmail</div>
+                                            <div class="supplier-name">@(string.IsNullOrEmpty(order.SupplierName) ? "N/A" : order.SupplierName)</div>
+                                            @if (!string.IsNullOrEmpty(order.SupplierEmail))
+                                            {
+                                                <div class="supplier-email">@order.SupplierEmail</div>
+                                            }
                                         </div>
                                     </td>
                                     <td>@order.DateOrdered.ToString("MM/dd/yyyy")</td>
                                     <td>@order.ExpectedDate.ToString("MM/dd/yyyy")</td>
                                     <td>@order.TotalItems</td>
+                                    <td>₱@order.Subtotal.ToString("N2")</td>
+                                    <td>₱@order.TaxAmount.ToString("N2")</td>
                                     <td>₱@order.TotalAmount.ToString("N2")</td>
                                     <td>
                                         <span class="status-badge @GetStatusBadgeClass(order.Status)">
@@ -103,21 +112,21 @@
                                             <button class="view-btn" title="View Details" @onclick="() => ViewPurchaseOrderDetails(order)">
                                                 <i class="fas fa-eye"></i>
                                             </button>
-                                            @if (order.Status != "Delivered" && order.Status != "Cancelled")
+                                            @if (order.Status?.ToLower() != "delivered" && order.Status?.ToLower() != "received" && order.Status?.ToLower() != "cancelled")
                                             {
-                                                <button class="edit-btn" title="Mark as Delivered" @onclick="() => MarkAsDelivered(order)">
+                                                <button class="edit-btn" title="Mark as Delivered" @onclick="() => ShowMarkAsDeliveredConfirmation(order)">
                                                     <i class="fas fa-check-circle"></i>
                                                 </button>
                                             }
-                                            @if (order.Status == "Delivered")
+                                            @if (order.Status?.ToLower() == "delivered")
                                             {
                                                 <button class="edit-btn" title="Go to Stock In" @onclick="() => GoToStockIn()">
                                                     <i class="fas fa-truck-loading"></i>
                                                 </button>
                                             }
-                                            @if (order.Status != "Delivered" && order.Status != "Cancelled")
+                                            @if (order.Status?.ToLower() != "delivered" && order.Status?.ToLower() != "received" && order.Status?.ToLower() != "cancelled")
                                             {
-                                                <button class="deactivate-btn" title="Cancel Purchase Order" @onclick="() => CancelPurchaseOrder(order)">
+                                                <button class="deactivate-btn" title="Cancel Purchase Order" @onclick="() => ShowCancelModal(order)">
                                                     <i class="fas fa-times-circle"></i>
                                                 </button>
                                             }
@@ -233,6 +242,9 @@
                                 <span class="field-error">@GetError("ExpectedDate")</span>
                             }
                         </div>
+                    </div>
+
+                    <div class="form-row">
                         <div class="form-group">
                             <label>Order Notes</label>
                             <input type="text" class="form-control" @bind="orderNotes" placeholder="Optional notes..." />
@@ -255,7 +267,10 @@
                                     <tr>
                                         <th>Product Name</th>
                                         <th>Quantity</th>
-                                        <th>Unit Cost Price</th>
+                                        <th>Unit Cost</th>
+                                        <th>Subtotal</th>
+                                        <th>Tax Rate</th>
+                                        <th>Tax Amount</th>
                                         <th>Total</th>
                                         <th>Action</th>
                                     </tr>
@@ -264,9 +279,18 @@
                                     @foreach (var item in orderItems)
                                     {
                                         <tr>
-                                            <td>@item.ProductName</td>
+                                            <td>
+                                                @item.ProductName
+                                                @if (item.IsTaxOverridden)
+                                                {
+                                                    <span class="badge" style="background-color: #f59e0b; color: white; font-size: 0.75rem; margin-left: 5px; padding: 2px 6px; border-radius: 3px;" title="Tax overridden for this item">Override</span>
+                                                }
+                                            </td>
                                             <td>@item.Quantity</td>
                                             <td>₱@item.UnitCost.ToString("N2")</td>
+                                            <td>₱@item.Subtotal.ToString("N2")</td>
+                                            <td>@(item.TaxRate > 0 ? $"{item.TaxRate * 100:N2}%" : "No Tax")</td>
+                                            <td>₱@item.TaxAmount.ToString("N2")</td>
                                             <td>₱@item.TotalPrice.ToString("N2")</td>
                                             <td>
                                                 <button class="delete-btn" @onclick="() => RemoveItem(item)">
@@ -277,8 +301,27 @@
                                     }
                                 </tbody>
                                 <tfoot>
+                                    <tr>
+                                        <td colspan="3" style="text-align: right;"><strong>Subtotal:</strong></td>
+                                        <td><strong>₱@GetSubtotal().ToString("N2")</strong></td>
+                                        <td colspan="2"></td>
+                                        <td></td>
+                                        <td></td>
+                                    </tr>
+                                    @if (GetTaxAmount() > 0)
+                                    {
+                                        <tr>
+                                            <td colspan="3" style="text-align: right;"><strong>Total Tax:</strong></td>
+                                            <td></td>
+                                            <td colspan="2" style="font-weight: 600;">₱@GetTaxAmount().ToString("N2")</td>
+                                            <td></td>
+                                            <td></td>
+                                        </tr>
+                                    }
                                     <tr class="total-row">
-                                        <td colspan="3"><strong>Grand Total:</strong></td>
+                                        <td colspan="3" style="text-align: right;"><strong>Grand Total:</strong></td>
+                                        <td></td>
+                                        <td colspan="2"></td>
                                         <td><strong>₱@GetGrandTotal().ToString("N2")</strong></td>
                                         <td></td>
                                     </tr>
@@ -297,7 +340,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
-                <button class="btn-submit" @onclick="SubmitPurchaseOrder" disabled="@(!IsFormValid || !orderItems.Any())">
+                <button class="btn-submit" @onclick="ShowCreatePOConfirmation" disabled="@(!IsFormValid || !orderItems.Any())">
                     @if (isSubmitting)
                     {
                         <span>Processing...</span>
@@ -343,11 +386,31 @@
                             <input type="number" class="form-control" @bind="newItemUnitCost" step="0.01" min="0" />
                         </div>
                     </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" @bind="overrideTax" style="margin-right: 8px;" />
+                            Override Tax (Use product tax if unchecked)
+                        </label>
+                    </div>
+                    @if (overrideTax)
+                    {
+                        <div class="form-group">
+                            <label>Tax *</label>
+                            <select class="form-control" @bind="selectedOverrideTaxId">
+                                <option value="">No Tax</option>
+                                @foreach (var tax in availableTaxes.Where(t => t.is_active))
+                                {
+                                    <option value="@tax.tax_id.ToString()">@tax.tax_name (@(tax.tax_rate * 100)%)</option>
+                                }
+                            </select>
+                            <small style="color: #6b7280; font-size: 0.875rem;">This will override the product's default tax for this purchase order only.</small>
+                        </div>
+                    }
                 </div>
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" @onclick="CloseAddItemModal">Cancel</button>
-                <button class="btn-submit" @onclick="AddItem" disabled="@(string.IsNullOrEmpty(selectedProductId) || newItemQuantity <= 0 || newItemUnitCost <= 0)">
+                <button class="btn-submit" @onclick="AddItem" disabled="@(string.IsNullOrEmpty(selectedProductId) || newItemQuantity <= 0 || newItemUnitCost <= 0 || (overrideTax && string.IsNullOrEmpty(selectedOverrideTaxId)))">
                     Add Item
                 </button>
             </div>
@@ -397,10 +460,38 @@
                                 <label>Status:</label>
                                 <span class="status-badge @GetStatusBadgeClass(viewingPurchaseOrder.Status)">@viewingPurchaseOrder.Status</span>
                             </div>
+                            @if (viewingPurchaseOrder.Status == "Cancelled" && !string.IsNullOrEmpty(viewingPurchaseOrder.CancellationReason))
+                            {
+                                <div class="po-detail-item">
+                                    <label>Cancellation Reason:</label>
+                                    <span style="color: #dc2626;">@viewingPurchaseOrder.CancellationReason</span>
+                                </div>
+                            }
+                            @if (viewingPurchaseOrder.Status == "Cancelled" && !string.IsNullOrEmpty(viewingPurchaseOrder.CancellationRemarks))
+                            {
+                                <div class="po-detail-item full-width">
+                                    <label>Cancellation Remarks:</label>
+                                    <span style="color: #6b7280; font-style: italic;">@viewingPurchaseOrder.CancellationRemarks</span>
+                                </div>
+                            }
                             <div class="po-detail-item">
                                 <label>Total Items:</label>
                                 <span>@viewingPurchaseOrder.TotalItems</span>
                             </div>
+                            @if (viewingPurchaseOrder.Subtotal > 0 || viewingPurchaseOrder.TaxAmount > 0)
+                            {
+                                <div class="po-detail-item">
+                                    <label>Subtotal:</label>
+                                    <span>₱@viewingPurchaseOrder.Subtotal.ToString("N2")</span>
+                                </div>
+                                @if (viewingPurchaseOrder.TaxAmount > 0)
+                                {
+                                    <div class="po-detail-item">
+                                        <label>Tax:</label>
+                                        <span>₱@viewingPurchaseOrder.TaxAmount.ToString("N2")</span>
+                                    </div>
+                                }
+                            }
                             <div class="po-detail-item full-width">
                                 <label>Total Amount:</label>
                                 <span class="total-amount">₱@viewingPurchaseOrder.TotalAmount.ToString("N2")</span>
@@ -420,24 +511,52 @@
                                         <th>SKU</th>
                                         <th>Quantity</th>
                                         <th>Unit Cost</th>
+                                        <th>Subtotal</th>
+                                        <th>Tax Rate</th>
+                                        <th>Tax Amount</th>
                                         <th>Total</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     @foreach (var item in viewingPOItems)
                                     {
+                                        var itemSubtotal = item.subtotal > 0 ? item.subtotal : (item.quantity_ordered * item.unit_cost);
+                                        var itemTaxAmount = item.tax_amount > 0 ? item.tax_amount : 0;
+                                        var itemTotal = item.total > 0 ? item.total : (itemSubtotal + itemTaxAmount);
+                                        var itemTaxRate = item.tax_rate > 0 ? item.tax_rate : 0;
+                                        
                                         <tr>
                                             <td>@(item.product_name ?? "N/A")</td>
                                             <td>@(item.product_sku ?? "N/A")</td>
                                             <td>@item.quantity_ordered</td>
                                             <td>₱@item.unit_cost.ToString("N2")</td>
-                                            <td>₱@((item.quantity_ordered * item.unit_cost).ToString("N2"))</td>
+                                            <td>₱@itemSubtotal.ToString("N2")</td>
+                                            <td>@(itemTaxRate > 0 ? $"{itemTaxRate * 100:N2}%" : "No Tax")</td>
+                                            <td>₱@itemTaxAmount.ToString("N2")</td>
+                                            <td>₱@itemTotal.ToString("N2")</td>
                                         </tr>
                                     }
                                 </tbody>
                                 <tfoot>
                                     <tr>
-                                        <td colspan="4" style="text-align: right; font-weight: 600;">Grand Total:</td>
+                                        <td colspan="4" style="text-align: right; font-weight: 600;">Subtotal:</td>
+                                        <td style="font-weight: 600;">₱@viewingPurchaseOrder.Subtotal.ToString("N2")</td>
+                                        <td colspan="2"></td>
+                                        <td></td>
+                                    </tr>
+                                    @if (viewingPurchaseOrder.TaxAmount > 0)
+                                    {
+                                        <tr>
+                                            <td colspan="4" style="text-align: right; font-weight: 600;">Total Tax:</td>
+                                            <td></td>
+                                            <td colspan="2" style="font-weight: 600;">₱@viewingPurchaseOrder.TaxAmount.ToString("N2")</td>
+                                            <td></td>
+                                        </tr>
+                                    }
+                                    <tr>
+                                        <td colspan="4" style="text-align: right; font-weight: 700;">Grand Total:</td>
+                                        <td></td>
+                                        <td colspan="2"></td>
                                         <td style="font-weight: 700; font-size: 16px;">₱@viewingPurchaseOrder.TotalAmount.ToString("N2")</td>
                                     </tr>
                                 </tfoot>
@@ -459,11 +578,133 @@
     </div>
 }
 
+<!-- Cancel Purchase Order Modal -->
+@if (showCancelModal && cancellingOrder != null)
+{
+    <div class="modal-overlay" @onclick="CloseCancelModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Cancel Purchase Order</h3>
+                <button class="modal-close" @onclick="CloseCancelModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to cancel Purchase Order <strong>@cancellingOrder.PONumber</strong>?</span>
+                </div>
+                <p style="margin-bottom: 15px; color: #6b7280;">
+                    This action cannot be undone and the order will not be available for stock in.
+                </p>
+                
+                <div class="form-group">
+                    <label for="cancellationReason">Cancellation Reason <span style="color: #6b7280; font-weight: normal;">(Optional)</span></label>
+                    <select id="cancellationReason"
+                            class="form-control"
+                            @bind="cancellationReason">
+                        <option value="">Select a reason...</option>
+                        <option value="Supplier Unable to Deliver">Supplier Unable to Deliver</option>
+                        <option value="Price Change">Price Change</option>
+                        <option value="Product No Longer Needed">Product No Longer Needed</option>
+                        <option value="Quality Issues">Quality Issues</option>
+                        <option value="Delivery Delay">Delivery Delay</option>
+                        <option value="Budget Constraints">Budget Constraints</option>
+                        <option value="Order Error">Order Error</option>
+                        <option value="Supplier Request">Supplier Request</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </div>
+                
+                <div class="form-group">
+                    <label for="cancellationRemarks">Cancellation Remarks <span style="color: #6b7280; font-weight: normal;">(Optional)</span></label>
+                    <textarea id="cancellationRemarks"
+                              class="form-control"
+                              @bind="cancellationRemarks"
+                              @bind:event="oninput"
+                              placeholder="Enter additional details or remarks..."
+                              rows="4"
+                              maxlength="1000"
+                              style="resize: vertical; min-height: 100px;"></textarea>
+                    <small style="color: #6b7280; font-size: 0.875rem;">
+                        @cancellationRemarks.Length/1000 characters
+                    </small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseCancelModal">Keep Order</button>
+                <button class="btn-submit btn-danger" @onclick="ConfirmCancelPurchaseOrder">
+                    Cancel Purchase Order
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal for Create Purchase Order -->
+@if (showCreatePOConfirmation)
+{
+    <div class="modal-overlay" @onclick="CloseCreatePOConfirmation">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Create Purchase Order</h3>
+                <button class="modal-close" @onclick="CloseCreatePOConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Are you sure you want to create this purchase order?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Supplier:</strong> @(suppliers.FirstOrDefault(s => s.Id == selectedSupplierId)?.Name ?? "N/A")</p>
+                    <p><strong>Date Ordered:</strong> @dateOrdered.ToString("MM/dd/yyyy")</p>
+                    <p><strong>Expected Date:</strong> @expectedDate.ToString("MM/dd/yyyy")</p>
+                    <p><strong>Total Items:</strong> @orderItems.Count</p>
+                    <p><strong>Grand Total:</strong> ₱@GetGrandTotal().ToString("N2")</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseCreatePOConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmCreatePurchaseOrder">Confirm Create</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal for Mark as Delivered -->
+@if (showMarkAsDeliveredConfirmation && orderToMarkAsDelivered != null)
+{
+    <div class="modal-overlay" @onclick="CloseMarkAsDeliveredConfirmation">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Mark as Delivered</h3>
+                <button class="modal-close" @onclick="CloseMarkAsDeliveredConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to mark Purchase Order <strong>@orderToMarkAsDelivered.PONumber</strong> as Delivered?</span>
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">This will change the status to "Delivered" and make it available for stock in.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseMarkAsDeliveredConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmMarkAsDelivered">Confirm</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private bool showPurchaseOrderModal = false;
     private bool showAddItemModal = false;
     private bool showViewDetailsModal = false;
+    private bool showCancelModal = false;
+    private bool showCreatePOConfirmation = false;
+    private bool showMarkAsDeliveredConfirmation = false;
+    private PurchaseOrderDisplay? orderToMarkAsDelivered = null;
     private PurchaseOrderDisplay? viewingPurchaseOrder = null;
+    private PurchaseOrderDisplay? cancellingOrder = null;
+    private string cancellationReason = "";
+    private string cancellationRemarks = "";
     private List<PurchaseOrderItem> viewingPOItems = new List<PurchaseOrderItem>();
     private bool isLoadingDetails = false;
     private bool isSubmitting = false;
@@ -482,6 +723,8 @@
     private string selectedProductId = "";
     private int newItemQuantity = 1;
     private decimal newItemUnitCost = 0;
+    private bool overrideTax = false;
+    private string selectedOverrideTaxId = "";
 
     // Data collections
     private List<OrderItem> orderItems = new List<OrderItem>();
@@ -494,6 +737,7 @@
     // Data collections (loaded from database)
     private List<SupplierDisplay> suppliers = new List<SupplierDisplay>();
     private List<ProductDisplay> products = new List<ProductDisplay>();
+    private List<TaxModel> availableTaxes = new List<TaxModel>();
 
     protected override async Task OnInitializedAsync()
     {
@@ -528,8 +772,12 @@
                 Name = p.product_name,
                 Brand = "", // Will be loaded if needed
                 Category = "", // Will be loaded if needed
-                CostPrice = p.cost_price
+                CostPrice = p.cost_price,
+                TaxId = p.tax_id
             }).ToList();
+            
+            // Load taxes for tax rate lookup
+            await LoadTaxes();
 
             // Load purchase orders from database
             await LoadPurchaseOrders();
@@ -559,14 +807,16 @@
                 purchaseOrderHistory.Add(new PurchaseOrderDisplay
                 {
                     POId = po.po_id,
-                    PONumber = po.po_number,
+                    PONumber = po.po_number ?? "",
                     SupplierName = po.supplier_name ?? "",
                     SupplierEmail = "", // Can be loaded if needed
                     DateOrdered = po.order_date,
                     ExpectedDate = po.expected_date,
-                    TotalItems = items.Count,
+                    TotalItems = items?.Count ?? 0,
+                    Subtotal = po.subtotal,
+                    TaxAmount = po.tax_amount,
                     TotalAmount = po.total_amount,
-                    Status = po.status
+                    Status = po.status ?? "Pending"
                 });
             }
         }
@@ -605,7 +855,7 @@
     private void CloseAddItemModal()
     {
         showAddItemModal = false;
-        ResetItemForm();
+        ResetAddItemForm();
         StateHasChanged();
     }
 
@@ -624,11 +874,17 @@
         selectedProductId = "";
         newItemQuantity = 1;
         newItemUnitCost = 0;
+        overrideTax = false;
+        selectedOverrideTaxId = "";
     }
 
     private void OnProductSelected(ChangeEventArgs e)
     {
         selectedProductId = e.Value?.ToString() ?? "";
+        
+        // Reset tax override when product changes
+        overrideTax = false;
+        selectedOverrideTaxId = "";
         
         // Auto-fill unit cost with product's cost price
         if (!string.IsNullOrEmpty(selectedProductId))
@@ -684,9 +940,32 @@
         return supplier?.ContactNumber ?? "";
     }
 
+    private decimal GetSubtotal()
+    {
+        return orderItems.Sum(item => item.Subtotal);
+    }
+
+    private decimal GetTaxAmount()
+    {
+        return orderItems.Sum(item => item.TaxAmount);
+    }
+
     private decimal GetGrandTotal()
     {
-        return orderItems.Sum(item => item.TotalPrice);
+        return GetSubtotal() + GetTaxAmount();
+    }
+    
+    private async Task LoadTaxes()
+    {
+        try
+        {
+            availableTaxes = await TaxService.GetTaxesAsync();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading taxes: {ex.Message}");
+            availableTaxes = new List<TaxModel>();
+        }
     }
 
     private IEnumerable<PurchaseOrderDisplay> FilteredOrders
@@ -737,19 +1016,71 @@
         var product = products.FirstOrDefault(p => p.Id == selectedProductId);
         if (product != null && newItemQuantity > 0 && newItemUnitCost > 0)
         {
+            // Calculate subtotal
+            decimal subtotal = newItemQuantity * newItemUnitCost;
+            
+            // Determine which tax to use
+            int? taxIdToUse = null;
+            decimal taxRate = 0;
+            decimal taxAmount = 0;
+            bool isOverridden = false;
+            
+            if (overrideTax && !string.IsNullOrEmpty(selectedOverrideTaxId) && int.TryParse(selectedOverrideTaxId, out int overrideTaxId))
+            {
+                // Use overridden tax
+                isOverridden = true;
+                taxIdToUse = overrideTaxId;
+                var tax = availableTaxes.FirstOrDefault(t => t.tax_id == overrideTaxId && t.is_active);
+                if (tax != null)
+                {
+                    taxRate = tax.tax_rate;
+                    taxAmount = subtotal * taxRate;
+                }
+            }
+            else if (product.TaxId.HasValue)
+            {
+                // Use product's default tax
+                taxIdToUse = product.TaxId;
+                var tax = availableTaxes.FirstOrDefault(t => t.tax_id == product.TaxId.Value && t.is_active);
+                if (tax != null)
+                {
+                    taxRate = tax.tax_rate;
+                    taxAmount = subtotal * taxRate;
+                }
+            }
+            
+            // Calculate total
+            decimal total = subtotal + taxAmount;
+            
             var newItem = new OrderItem
             {
                 ProductId = selectedProductId,
                 ProductName = product.Name,
                 Quantity = newItemQuantity,
                 UnitCost = newItemUnitCost,
-                TotalPrice = newItemQuantity * newItemUnitCost
+                Subtotal = subtotal,
+                TaxId = taxIdToUse,
+                TaxRate = taxRate,
+                TaxAmount = taxAmount,
+                TotalPrice = total,
+                IsTaxOverridden = isOverridden,
+                OverrideTaxId = isOverridden ? taxIdToUse : null
             };
 
             orderItems.Add(newItem);
             CloseAddItemModal();
+            ResetAddItemForm();
             StateHasChanged();
         }
+    }
+    
+    private void ResetAddItemForm()
+    {
+        selectedProductId = "";
+        newItemQuantity = 1;
+        newItemUnitCost = 0;
+        overrideTax = false;
+        selectedOverrideTaxId = "";
     }
 
     private void RemoveItem(OrderItem item)
@@ -786,6 +1117,77 @@
         }
     }
 
+    // Confirmation Modal Methods
+    private void ShowCreatePOConfirmation()
+    {
+        ClearValidationErrors();
+        ClearError();
+        ClearSuccess();
+        StateHasChanged();
+
+        validationErrors = ValidateForm();
+
+        if (validationErrors.Any())
+        {
+            StateHasChanged();
+            return;
+        }
+
+        if (!int.TryParse(selectedSupplierId, out int supplierId) || supplierId <= 0)
+        {
+            errorMessage = "Invalid supplier selected.";
+            StateHasChanged();
+            return;
+        }
+
+        if (!orderItems.Any())
+        {
+            errorMessage = "Please add at least one item to the order.";
+            StateHasChanged();
+            return;
+        }
+
+        showCreatePOConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseCreatePOConfirmation()
+    {
+        showCreatePOConfirmation = false;
+        StateHasChanged();
+    }
+
+    private void ShowMarkAsDeliveredConfirmation(PurchaseOrderDisplay order)
+    {
+        orderToMarkAsDelivered = order;
+        showMarkAsDeliveredConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseMarkAsDeliveredConfirmation()
+    {
+        showMarkAsDeliveredConfirmation = false;
+        orderToMarkAsDelivered = null;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmCreatePurchaseOrder()
+    {
+        showCreatePOConfirmation = false;
+        await SubmitPurchaseOrder();
+    }
+
+    private async Task ConfirmMarkAsDelivered()
+    {
+        if (orderToMarkAsDelivered != null)
+        {
+            showMarkAsDeliveredConfirmation = false;
+            var order = orderToMarkAsDelivered;
+            orderToMarkAsDelivered = null;
+            await MarkAsDelivered(order);
+        }
+    }
+
     private async Task SubmitPurchaseOrder()
     {
         try
@@ -813,15 +1215,16 @@
                 return;
             }
 
-            // Convert OrderItems to PurchaseOrderItems
+            // Convert OrderItems to PurchaseOrderItems (tax will be recalculated by service from product's tax_id)
             var poItems = orderItems.Select(item => new PurchaseOrderItem
             {
                 product_id = int.Parse(item.ProductId),
                 quantity_ordered = item.Quantity,
                 unit_cost = item.UnitCost
+                // Note: Tax will be calculated by PurchaseOrderService from product's tax_id
             }).ToList();
 
-            // Save to database
+            // Save to database (tax is now calculated per item from product's tax_id)
             var poId = await PurchaseOrderService.CreatePurchaseOrderAsync(
                 supplierId,
                 dateOrdered,
@@ -867,6 +1270,7 @@
         public string Brand { get; set; } = string.Empty;
         public string Category { get; set; } = string.Empty;
         public decimal? CostPrice { get; set; }
+        public int? TaxId { get; set; }
     }
 
     private class OrderItem
@@ -875,7 +1279,13 @@
         public string ProductName { get; set; } = string.Empty;
         public int Quantity { get; set; }
         public decimal UnitCost { get; set; }
+        public decimal Subtotal { get; set; }
+        public int? TaxId { get; set; }
+        public decimal TaxRate { get; set; }
+        public decimal TaxAmount { get; set; }
         public decimal TotalPrice { get; set; }
+        public bool IsTaxOverridden { get; set; }
+        public int? OverrideTaxId { get; set; }
     }
 
     private class PurchaseOrderDisplay
@@ -887,18 +1297,18 @@
         public DateTime DateOrdered { get; set; }
         public DateTime ExpectedDate { get; set; }
         public int TotalItems { get; set; }
+        public decimal Subtotal { get; set; }
+        public decimal TaxAmount { get; set; }
         public decimal TotalAmount { get; set; }
         public string Status { get; set; } = "Pending";
+        public string? CancellationReason { get; set; }
+        public string? CancellationRemarks { get; set; }
     }
 
     private async Task MarkAsDelivered(PurchaseOrderDisplay order)
     {
         try
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", $"Are you sure you want to mark Purchase Order {order.PONumber} as Delivered?");
-            
-            if (!confirmed)
-                return;
 
             var success = await PurchaseOrderService.UpdatePurchaseOrderStatusAsync(order.POId, "Delivered");
             
@@ -952,6 +1362,10 @@
 
             // Update viewing order with full details
             viewingPurchaseOrder.SupplierEmail = ""; // Can be loaded if needed
+            viewingPurchaseOrder.Subtotal = fullPO.subtotal;
+            viewingPurchaseOrder.TaxAmount = fullPO.tax_amount;
+            viewingPurchaseOrder.CancellationReason = fullPO.cancellation_reason;
+            viewingPurchaseOrder.CancellationRemarks = fullPO.cancellation_remarks;
             viewingPOItems = items;
 
             isLoadingDetails = false;
@@ -974,21 +1388,42 @@
         StateHasChanged();
     }
 
-    private async Task CancelPurchaseOrder(PurchaseOrderDisplay order)
+    private void ShowCancelModal(PurchaseOrderDisplay order)
     {
+        cancellingOrder = order;
+        cancellationReason = "";
+        cancellationRemarks = "";
+        showCancelModal = true;
+        errorMessage = "";
+        StateHasChanged();
+    }
+
+    private void CloseCancelModal()
+    {
+        showCancelModal = false;
+        cancellingOrder = null;
+        cancellationReason = "";
+        cancellationRemarks = "";
+        StateHasChanged();
+    }
+
+    private async Task ConfirmCancelPurchaseOrder()
+    {
+        if (cancellingOrder == null)
+            return;
+
         try
         {
-            var confirmed = await JSRuntime.InvokeAsync<bool>("confirm", 
-                $"Are you sure you want to cancel Purchase Order {order.PONumber}? This action cannot be undone and the order will not be available for stock in.");
-            
-            if (!confirmed)
-                return;
-
-            var success = await PurchaseOrderService.UpdatePurchaseOrderStatusAsync(order.POId, "Cancelled");
+            var success = await PurchaseOrderService.UpdatePurchaseOrderStatusAsync(
+                cancellingOrder.POId, 
+                "Cancelled", 
+                string.IsNullOrWhiteSpace(cancellationReason) ? null : cancellationReason.Trim(),
+                string.IsNullOrWhiteSpace(cancellationRemarks) ? null : cancellationRemarks.Trim());
             
             if (success)
             {
-                successMessage = $"Purchase Order {order.PONumber} has been cancelled.";
+                successMessage = $"Purchase Order {cancellingOrder.PONumber} has been cancelled.";
+                CloseCancelModal();
                 await LoadPurchaseOrders();
             }
             else

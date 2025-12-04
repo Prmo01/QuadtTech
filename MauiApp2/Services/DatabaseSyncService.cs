@@ -89,10 +89,10 @@ namespace MauiApp2.Services
                 result.Messages.Add("");
                 result.Messages.Add("Starting data synchronization...");
 
-                // Sync each table
+                // Sync each table with retry logic
                 foreach (var tableName in Tables)
                 {
-                    var tableResult = await SyncTableAsync(localConnectionString, cloudConnectionString, tableName);
+                    var tableResult = await SyncTableWithRetryAsync(localConnectionString, cloudConnectionString, tableName, maxRetries: 3);
                     result.TotalTablesProcessed++;
                     result.TotalRowsCopied += tableResult.RowsCopied;
                     
@@ -172,14 +172,72 @@ namespace MauiApp2.Services
             }
         }
 
+        private async Task<TableSyncResult> SyncTableWithRetryAsync(string localConnectionString, string cloudConnectionString, string tableName, int maxRetries = 3)
+        {
+            TableSyncResult? lastResult = null;
+            
+            for (int attempt = 1; attempt <= maxRetries; attempt++)
+            {
+                try
+                {
+                    lastResult = await SyncTableAsync(localConnectionString, cloudConnectionString, tableName);
+                    if (lastResult.IsSuccess)
+                    {
+                        return lastResult;
+                    }
+                    
+                    // If it's a connection error, wait and retry
+                    if (lastResult.ErrorMessage.Contains("connection") || 
+                        lastResult.ErrorMessage.Contains("network") ||
+                        lastResult.ErrorMessage.Contains("transport"))
+                    {
+                        if (attempt < maxRetries)
+                        {
+                            await Task.Delay(2000 * attempt); // Exponential backoff: 2s, 4s, 6s
+                            continue;
+                        }
+                    }
+                    
+                    // If it's not a connection error, don't retry
+                    return lastResult;
+                }
+                catch (Exception ex)
+                {
+                    lastResult = new TableSyncResult
+                    {
+                        IsSuccess = false,
+                        ErrorMessage = ex.Message
+                    };
+                    
+                    if (attempt < maxRetries && (ex.Message.Contains("connection") || ex.Message.Contains("network")))
+                    {
+                        await Task.Delay(2000 * attempt);
+                        continue;
+                    }
+                    
+                    return lastResult;
+                }
+            }
+            
+            return lastResult ?? new TableSyncResult { IsSuccess = false, ErrorMessage = "Max retries exceeded" };
+        }
+
         private async Task<TableSyncResult> SyncTableAsync(string localConnectionString, string cloudConnectionString, string tableName)
         {
             var result = new TableSyncResult();
+            SqlConnection? localConn = null;
+            SqlConnection? cloudConn = null;
 
             try
             {
-                using var localConn = new SqlConnection(localConnectionString);
-                using var cloudConn = new SqlConnection(cloudConnectionString);
+                // Create connections with longer timeout for cloud
+                localConn = new SqlConnection(localConnectionString);
+                var cloudConnBuilder = new SqlConnectionStringBuilder(cloudConnectionString)
+                {
+                    ConnectTimeout = 60, // 60 seconds connection timeout
+                    CommandTimeout = 300 // 5 minutes command timeout
+                };
+                cloudConn = new SqlConnection(cloudConnBuilder.ConnectionString);
 
                 await localConn.OpenAsync();
                 await cloudConn.OpenAsync();
@@ -233,8 +291,35 @@ namespace MauiApp2.Services
                 // Get column names from cloud database
                 var cloudColumns = await GetTableColumnsAsync(cloudConn, tableName);
                 
+                // Check if table has IDENTITY column and get its name
+                var hasIdentity = await HasIdentityColumnAsync(cloudConn, tableName);
+                string? identityColumnName = null;
+                if (hasIdentity)
+                {
+                    identityColumnName = await GetIdentityColumnNameAsync(cloudConn, tableName);
+                }
+                
                 // Filter to only include columns that exist in both databases
                 var columns = localColumns.Where(c => cloudColumns.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList();
+                
+                // If identity column exists and IDENTITY_INSERT will be ON, ensure it's in the columns list
+                bool identityColumnInLocal = false;
+                string? localIdentityColumnName = null;
+                if (hasIdentity && !string.IsNullOrEmpty(identityColumnName))
+                {
+                    // Find matching identity column name (case-insensitive) in local columns
+                    localIdentityColumnName = localColumns.FirstOrDefault(c => 
+                        string.Equals(c, identityColumnName, StringComparison.OrdinalIgnoreCase));
+                    identityColumnInLocal = !string.IsNullOrEmpty(localIdentityColumnName);
+                    
+                    // If identity column exists in both databases but not in our list, add it
+                    if (identityColumnInLocal && 
+                        cloudColumns.Contains(identityColumnName, StringComparer.OrdinalIgnoreCase) &&
+                        !columns.Any(c => string.Equals(c, localIdentityColumnName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        columns.Insert(0, localIdentityColumnName); // Add at beginning to ensure it's included
+                    }
+                }
                 
                 // Check for missing columns and log warnings
                 var missingColumns = localColumns.Where(c => !cloudColumns.Contains(c, StringComparer.OrdinalIgnoreCase)).ToList();
@@ -250,13 +335,29 @@ namespace MauiApp2.Services
                     return result;
                 }
 
-                // Check if table has IDENTITY column
-                var hasIdentity = await HasIdentityColumnAsync(cloudConn, tableName);
-                if (hasIdentity)
+                // Set IDENTITY_INSERT ON only if identity column exists in both databases
+                // This must be done BEFORE any inserts
+                if (hasIdentity && !string.IsNullOrEmpty(identityColumnName) && identityColumnInLocal && !string.IsNullOrEmpty(localIdentityColumnName))
                 {
+                    // Verify identity column is in our columns list
+                    var hasIdentityInList = columns.Any(c => 
+                        string.Equals(c, localIdentityColumnName, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (!hasIdentityInList)
+                    {
+                        result.ErrorMessage = $"Identity column '{identityColumnName}' must be included when IDENTITY_INSERT is ON";
+                        return result;
+                    }
+                    
                     var identityQuery = $"SET IDENTITY_INSERT [{tableName}] ON";
                     using var identityCmd = new SqlCommand(identityQuery, cloudConn);
                     await identityCmd.ExecuteNonQueryAsync();
+                }
+                else if (hasIdentity && !identityColumnInLocal)
+                {
+                    // Identity column exists in cloud but not in local - don't use IDENTITY_INSERT
+                    // Let SQL Server auto-generate the identity values
+                    hasIdentity = false;
                 }
 
                 int rowCount = 0;
@@ -356,6 +457,29 @@ namespace MauiApp2.Services
                 result.IsSuccess = false;
                 result.ErrorMessage = ex.Message;
             }
+            finally
+            {
+                // Ensure connections are properly closed
+                try
+                {
+                    if (localConn != null && localConn.State != System.Data.ConnectionState.Closed)
+                    {
+                        localConn.Close();
+                        localConn.Dispose();
+                    }
+                }
+                catch { }
+                
+                try
+                {
+                    if (cloudConn != null && cloudConn.State != System.Data.ConnectionState.Closed)
+                    {
+                        cloudConn.Close();
+                        cloudConn.Dispose();
+                    }
+                }
+                catch { }
+            }
 
             return result;
         }
@@ -379,6 +503,28 @@ namespace MauiApp2.Services
             catch
             {
                 return false;
+            }
+        }
+
+        private async Task<string?> GetIdentityColumnNameAsync(SqlConnection connection, string tableName)
+        {
+            try
+            {
+                var query = @"
+                    SELECT c.name
+                    FROM sys.columns c
+                    INNER JOIN sys.tables t ON c.object_id = t.object_id
+                    WHERE t.name = @tableName 
+                    AND c.is_identity = 1";
+
+                using var cmd = new SqlCommand(query, connection);
+                cmd.Parameters.AddWithValue("@tableName", tableName);
+                var result = await cmd.ExecuteScalarAsync();
+                return result?.ToString();
+            }
+            catch
+            {
+                return null;
             }
         }
 

@@ -33,8 +33,8 @@ namespace MauiApp2.Services
 
             try
             {
-                // Step 1: Generate Sales Order Number (INV-001, INV-002, etc.)
-                string salesOrderNumber = await GenerateSalesOrderNumberAsync(connection, transaction);
+                // Step 1: Generate Sales Order Number (INV-YYYYMM-NNNN, similar to PO format)
+                string salesOrderNumber = await GenerateSalesOrderNumberAsync(connection, transaction, salesDate);
 
                 // Step 2: Calculate totals and get tax rates for each item
                 decimal subtotal = 0;
@@ -103,6 +103,9 @@ namespace MauiApp2.Services
 
                 await _stockOutService.CreateStockOutFromSaleAsync(connection, transaction, salesOrderId, stockOutItems, userId);
 
+                // Step 6: Create automatic accounting ledger entries
+                await CreateSalesLedgerEntriesAsync(connection, transaction, salesOrderId, salesOrderNumber, totalAmount, items, userId);
+
                 // Commit transaction
                 transaction.Commit();
 
@@ -115,14 +118,77 @@ namespace MauiApp2.Services
             }
         }
 
-        // Generate Sales Order Number (INV-001, INV-002, etc.)
-        private async Task<string> GenerateSalesOrderNumberAsync(SqlConnection connection, SqlTransaction transaction)
+        // Generate Sales Order Number (INV-YYYYMM-NNNN, similar to PO-YYYYMM-NNNN format)
+        private async Task<string> GenerateSalesOrderNumberAsync(SqlConnection connection, SqlTransaction transaction, DateTime salesDate)
         {
-            var command = new SqlCommand(@"
-                SELECT COUNT(*) FROM tbl_sales_order", connection, transaction);
+            // Get year and month from sales date
+            int year = salesDate.Year;
+            int month = salesDate.Month;
+            string yearMonth = $"{year}{month.ToString("D2")}"; // YYYYMM format
             
-            var count = (int)await command.ExecuteScalarAsync();
-            return $"INV-{(count + 1).ToString("D3")}";
+            // Find the highest invoice number for this year-month
+            var command = new SqlCommand(@"
+                SELECT ISNULL(MAX(CAST(SUBSTRING(sales_order_number, 10, 4) AS INT)), 0)
+                FROM tbl_sales_order
+                WHERE sales_order_number LIKE @pattern
+                AND LEN(sales_order_number) = 13
+                AND ISNUMERIC(SUBSTRING(sales_order_number, 10, 4)) = 1", connection, transaction);
+            
+            string pattern = $"INV-{yearMonth}-____";
+            command.Parameters.AddWithValue("@pattern", pattern);
+            
+            var maxResult = await command.ExecuteScalarAsync();
+            int nextNumber = 1;
+            
+            if (maxResult != null && !DBNull.Value.Equals(maxResult))
+            {
+                try
+                {
+                    nextNumber = Convert.ToInt32(maxResult) + 1;
+                }
+                catch
+                {
+                    nextNumber = 1; // Fallback if conversion fails
+                }
+            }
+            
+            // Generate invoice number and ensure uniqueness (handle race conditions)
+            string invoiceNumber;
+            int maxAttempts = 100; // Prevent infinite loop
+            int attempts = 0;
+            
+            do
+            {
+                // Generate invoice number: INV-YYYYMM-NNNN
+                invoiceNumber = $"INV-{yearMonth}-{nextNumber.ToString("D4")}";
+                
+                // Check for uniqueness within the transaction
+                var checkCommand = new SqlCommand(
+                    "SELECT COUNT(*) FROM tbl_sales_order WHERE sales_order_number = @sales_order_number",
+                    connection, transaction);
+                checkCommand.Parameters.AddWithValue("@sales_order_number", invoiceNumber);
+                
+                var count = (int)await checkCommand.ExecuteScalarAsync();
+                
+                if (count == 0)
+                {
+                    // Number is unique, break out of loop
+                    break;
+                }
+                
+                // Number exists, try next number
+                nextNumber++;
+                attempts++;
+                
+                // Safety check to prevent infinite loop
+                if (attempts >= maxAttempts)
+                {
+                    throw new Exception($"Unable to generate unique sales order number after {maxAttempts} attempts. Please try again.");
+                }
+                
+            } while (true);
+            
+            return invoiceNumber;
         }
 
         // Get product with tax info
@@ -363,8 +429,104 @@ namespace MauiApp2.Services
 
             return items;
         }
+
+        // Create automatic ledger entries for sales
+        private async Task CreateSalesLedgerEntriesAsync(SqlConnection connection, SqlTransaction transaction, int salesOrderId, string salesOrderNumber, decimal totalAmount, List<SalesOrderItem> items, int userId)
+        {
+            try
+            {
+                // Get account IDs (Cash, Sales Revenue, COGS, Inventory)
+                int cashAccountId = await GetAccountIdByCodeAsync(connection, transaction, "1001"); // Cash
+                int salesRevenueAccountId = await GetAccountIdByCodeAsync(connection, transaction, "4001"); // Sales Revenue
+                int cogsAccountId = await GetAccountIdByCodeAsync(connection, transaction, "5001"); // COGS
+                int inventoryAccountId = await GetAccountIdByCodeAsync(connection, transaction, "1002"); // Inventory
+
+                // If accounts don't exist, skip accounting (graceful degradation)
+                if (cashAccountId == 0 || salesRevenueAccountId == 0)
+                {
+                    Console.WriteLine("Warning: Chart of Accounts not set up. Skipping automatic ledger entries.");
+                    return;
+                }
+
+                // 1. Record Cash (Debit) and Sales Revenue (Credit)
+                await CreateLedgerEntryAsync(connection, transaction, cashAccountId, totalAmount, 0, 
+                    $"Sale {salesOrderNumber}", "Sales", salesOrderId, userId);
+                await CreateLedgerEntryAsync(connection, transaction, salesRevenueAccountId, 0, totalAmount, 
+                    $"Sale {salesOrderNumber}", "Sales", salesOrderId, userId);
+
+                // 2. Record COGS and Inventory for each item (if COGS and Inventory accounts exist)
+                if (cogsAccountId > 0 && inventoryAccountId > 0)
+                {
+                    foreach (var item in items)
+                    {
+                        // Get product cost
+                        var product = await GetProductWithTaxAsync(connection, transaction, item.product_id);
+                        if (product != null && product.cost_price.HasValue)
+                        {
+                            decimal cogsAmount = product.cost_price.Value * item.quantity;
+                            
+                            // COGS Debit
+                            await CreateLedgerEntryAsync(connection, transaction, cogsAccountId, cogsAmount, 0,
+                                $"COGS for Sale {salesOrderNumber} - {product.product_name}", "Sales", salesOrderId, userId);
+                            
+                            // Inventory Credit
+                            await CreateLedgerEntryAsync(connection, transaction, inventoryAccountId, 0, cogsAmount,
+                                $"Inventory sold - Sale {salesOrderNumber} - {product.product_name}", "Sales", salesOrderId, userId);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Log error but don't fail the sale
+                Console.WriteLine($"Error creating ledger entries: {ex.Message}");
+            }
+        }
+
+        // Helper: Get account ID by code
+        private async Task<int> GetAccountIdByCodeAsync(SqlConnection connection, SqlTransaction transaction, string accountCode)
+        {
+            try
+            {
+                var command = new SqlCommand(@"
+                    SELECT account_id FROM tbl_chart_of_accounts 
+                    WHERE account_code = @account_code AND is_active = 1", connection, transaction);
+                command.Parameters.AddWithValue("@account_code", accountCode);
+
+                var result = await command.ExecuteScalarAsync();
+                return result != null && result != DBNull.Value ? Convert.ToInt32(result) : 0;
+            }
+            catch
+            {
+                return 0; // Account doesn't exist
+            }
+        }
+
+        // Helper: Create ledger entry within transaction
+        private async Task CreateLedgerEntryAsync(SqlConnection connection, SqlTransaction transaction, int accountId, 
+            decimal debitAmount, decimal creditAmount, string description, string referenceType, int referenceId, int createdBy)
+        {
+            var command = new SqlCommand(@"
+                INSERT INTO tbl_general_ledger 
+                (transaction_date, account_id, debit_amount, credit_amount, description, 
+                 reference_type, reference_id, created_by, created_date)
+                VALUES 
+                (GETDATE(), @account_id, @debit_amount, @credit_amount, @description,
+                 @reference_type, @reference_id, @created_by, GETDATE())", connection, transaction);
+
+            command.Parameters.AddWithValue("@account_id", accountId);
+            command.Parameters.AddWithValue("@debit_amount", debitAmount);
+            command.Parameters.AddWithValue("@credit_amount", creditAmount);
+            command.Parameters.AddWithValue("@description", description);
+            command.Parameters.AddWithValue("@reference_type", referenceType);
+            command.Parameters.AddWithValue("@reference_id", referenceId);
+            command.Parameters.AddWithValue("@created_by", createdBy);
+
+            await command.ExecuteNonQueryAsync();
+        }
     }
 }
+
 
 
 

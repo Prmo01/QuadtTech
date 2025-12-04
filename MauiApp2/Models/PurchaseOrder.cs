@@ -10,8 +10,12 @@ namespace MauiApp2.Models
         public DateTime order_date { get; set; }
         public DateTime expected_date { get; set; }
         public string status { get; set; } = "Pending";
+        public decimal subtotal { get; set; }
+        public decimal tax_amount { get; set; }
         public decimal total_amount { get; set; }
         public string? notes { get; set; }
+        public string? cancellation_reason { get; set; }
+        public string? cancellation_remarks { get; set; }
         public DateTime created_date { get; set; }
         public DateTime? modified_date { get; set; }
         

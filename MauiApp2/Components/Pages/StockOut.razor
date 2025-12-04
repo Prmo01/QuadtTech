@@ -220,7 +220,7 @@
             </div>
             <div class="modal-footer">
                 <button class="btn-cancel" @onclick="CloseModal">Cancel</button>
-                <button class="btn-submit btn-submit-red" @onclick="SubmitStockOut" disabled="@isSubmitting">
+                <button class="btn-submit btn-submit-red" @onclick="ShowSubmitStockOutConfirmation" disabled="@isSubmitting">
                     @if (isSubmitting)
                     {
                         <span>Processing...</span>
@@ -235,9 +235,44 @@
     </div>
 }
 
+<!-- Confirmation Modal for Stock Out -->
+@if (showSubmitStockOutConfirmation)
+{
+    <div class="modal-overlay" @onclick="CloseSubmitStockOutConfirmation">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Stock Out</h3>
+                <button class="modal-close" @onclick="CloseSubmitStockOutConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to process this stock out?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Product:</strong> @(products.FirstOrDefault(p => p.Id == selectedProductId)?.Name ?? "N/A")</p>
+                    <p><strong>Quantity:</strong> @quantity</p>
+                    <p><strong>Reason:</strong> @selectedReason</p>
+                    <p><strong>Date:</strong> @stockOutDate.ToString("MM/dd/yyyy")</p>
+                    @if (!string.IsNullOrWhiteSpace(remarks))
+                    {
+                        <p><strong>Remarks:</strong> @remarks</p>
+                    }
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">This action will reduce the inventory quantity.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseSubmitStockOutConfirmation">Cancel</button>
+                <button class="btn-submit btn-submit-red" @onclick="ConfirmSubmitStockOut">Confirm Stock Out</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
     private bool isInventoryMenuOpen = true;
     private bool showStockOutModal = false;
+    private bool showSubmitStockOutConfirmation = false;
     private bool isSubmitting = false;
     private bool showError = false;
     private bool showSuccess = false;
@@ -353,6 +388,38 @@
         }
 
         return errors;
+    }
+
+    // Confirmation Modal Methods
+    private void ShowSubmitStockOutConfirmation()
+    {
+        ClearValidationErrors();
+        ClearError();
+        ClearSuccess();
+        StateHasChanged();
+
+        validationErrors = ValidateForm();
+
+        if (validationErrors.Any())
+        {
+            StateHasChanged();
+            return;
+        }
+
+        showSubmitStockOutConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseSubmitStockOutConfirmation()
+    {
+        showSubmitStockOutConfirmation = false;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmSubmitStockOut()
+    {
+        showSubmitStockOutConfirmation = false;
+        await SubmitStockOut();
     }
 
     private async Task SubmitStockOut()

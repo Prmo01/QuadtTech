@@ -29,7 +29,7 @@ namespace MauiApp2.Services
                 await connection.OpenAsync();
 
                 var command = new SqlCommand(@"
-                    SELECT brand_id, brand_name, description 
+                    SELECT brand_id, brand_name, ISNULL(brand_code, ''), description 
                     FROM tbl_brand 
                     ORDER BY brand_name", connection);
 
@@ -40,7 +40,8 @@ namespace MauiApp2.Services
                     {
                         brand_id = reader.GetInt32(0),
                         brand_name = reader.GetString(1),
-                        description = reader.IsDBNull(2) ? null : reader.GetString(2)
+                        brand_code = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        description = reader.IsDBNull(3) ? null : reader.GetString(3)
                     });
                 }
             }
@@ -69,12 +70,23 @@ namespace MauiApp2.Services
                 using var connection = db.GetConnection();
                 await connection.OpenAsync();
 
+                // Auto-generate brand_code if not provided
+                string brandCode = brand.brand_code;
+                if (string.IsNullOrWhiteSpace(brandCode))
+                {
+                    // Generate code from first 3 characters of brand name
+                    var sanitized = System.Text.RegularExpressions.Regex.Replace(
+                        brand.brand_name.ToUpper(), @"[^A-Z0-9]", "");
+                    brandCode = sanitized.Length > 3 ? sanitized.Substring(0, 3) : (sanitized.Length > 0 ? sanitized : "GEN");
+                }
+
                 var command = new SqlCommand(@"
-                    INSERT INTO tbl_brand (brand_name, description)
-                    VALUES (@brand_name, @description);
+                    INSERT INTO tbl_brand (brand_name, brand_code, description)
+                    VALUES (@brand_name, @brand_code, @description);
                     SELECT SCOPE_IDENTITY();", connection);
 
                 command.Parameters.AddWithValue("@brand_name", brand.brand_name);
+                command.Parameters.AddWithValue("@brand_code", brandCode);
                 command.Parameters.AddWithValue("@description", (object)brand.description ?? DBNull.Value);
 
                 var result = await command.ExecuteScalarAsync();
@@ -98,13 +110,24 @@ namespace MauiApp2.Services
                 using var connection = db.GetConnection();
                 await connection.OpenAsync();
 
+                // Auto-generate brand_code if not provided
+                string brandCode = brand.brand_code;
+                if (string.IsNullOrWhiteSpace(brandCode))
+                {
+                    // Generate code from first 3 characters of brand name
+                    var sanitized = System.Text.RegularExpressions.Regex.Replace(
+                        brand.brand_name.ToUpper(), @"[^A-Z0-9]", "");
+                    brandCode = sanitized.Length > 3 ? sanitized.Substring(0, 3) : (sanitized.Length > 0 ? sanitized : "GEN");
+                }
+
                 var command = new SqlCommand(@"
                     UPDATE tbl_brand 
-                    SET brand_name = @brand_name, description = @description
+                    SET brand_name = @brand_name, brand_code = @brand_code, description = @description
                     WHERE brand_id = @brand_id", connection);
 
                 command.Parameters.AddWithValue("@brand_id", brand.brand_id);
                 command.Parameters.AddWithValue("@brand_name", brand.brand_name);
+                command.Parameters.AddWithValue("@brand_code", brandCode);
                 command.Parameters.AddWithValue("@description", (object)brand.description ?? DBNull.Value);
 
                 return await command.ExecuteNonQueryAsync() > 0;
@@ -143,7 +166,7 @@ namespace MauiApp2.Services
                 await connection.OpenAsync();
 
                 var command = new SqlCommand(@"
-                    SELECT brand_id, brand_name, description 
+                    SELECT brand_id, brand_name, ISNULL(brand_code, ''), description 
                     FROM tbl_brand 
                     WHERE brand_id = @brand_id", connection);
 
@@ -156,7 +179,8 @@ namespace MauiApp2.Services
                     {
                         brand_id = reader.GetInt32(0),
                         brand_name = reader.GetString(1),
-                        description = reader.IsDBNull(2) ? null : reader.GetString(2)
+                        brand_code = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        description = reader.IsDBNull(3) ? null : reader.GetString(3)
                     };
                 }
 

@@ -3,10 +3,11 @@
 @layout MainLayout
 
 @using MauiApp2.Services
+@using Microsoft.JSInterop
 
 @inject IAuthService AuthService
-
 @inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
 
 <link href="css/reports.css" rel="stylesheet" />
 
@@ -40,6 +41,15 @@
 
             </div>
 
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-error" style="margin: 20px; padding: 15px; background-color: #fee2e2; border: 1px solid #fecaca; border-radius: 8px; color: #991b1b;">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>@errorMessage</span>
+                <button style="float: right; background: none; border: none; color: #991b1b; cursor: pointer; font-size: 18px;" @onclick="ClearErrorMessage">×</button>
+            </div>
         }
 
         <div class="reports-section">
@@ -255,7 +265,7 @@
 
                         <div class="table-container">
 
-                            <table class="data-table">
+                            <table id="report-table" class="data-table">
 
                                 <thead>
 
@@ -366,7 +376,7 @@
 
                         <div class="table-container">
 
-                            <table class="data-table">
+                            <table id="report-table" class="data-table">
 
                                 <thead>
 
@@ -473,7 +483,7 @@
 
                         <div class="table-container">
 
-                            <table class="data-table">
+                            <table id="report-table" class="data-table">
 
                                 <thead>
 
@@ -580,7 +590,7 @@
 
                         <div class="table-container">
 
-                            <table class="data-table">
+                            <table id="report-table" class="data-table">
 
                                 <thead>
 
@@ -679,6 +689,14 @@
     private bool isLoading = true;
 
     private string activeTab = "sales";
+    
+    private string errorMessage = "";
+
+    private void ClearErrorMessage()
+    {
+        errorMessage = "";
+        StateHasChanged();
+    }
 
     // Date filtering
 
@@ -699,19 +717,33 @@
     protected override async Task OnInitializedAsync()
 
     {
-
         if (!AuthService.IsAuthenticated)
-
         {
-
             Navigation.NavigateTo("/");
-
             return;
+        }
 
+        // Check if user can access reports
+        if (!CanAccessReports())
+        {
+            Navigation.NavigateTo("/dashboard");
+            return;
         }
 
         await LoadReportsData();
 
+    }
+
+    // Check if user can access reports
+    // Only Inventory Manager and Administrator can access
+    private bool CanAccessReports()
+    {
+        if (AuthService == null)
+            return false;
+
+        string userRole = (AuthService.CurrentUserRoleName ?? "").Trim();
+        return userRole.Equals("Inventory Manager", StringComparison.OrdinalIgnoreCase) ||
+               userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task LoadReportsData()
@@ -905,15 +937,26 @@
     }
 
     private async Task ExportSalesReport()
-
     {
+        if (salesReportData == null || !salesReportData.Any())
+        {
+            errorMessage = "No data available to export.";
+            StateHasChanged();
+            return;
+        }
 
-        // TODO: Implement PDF export
-
-        Console.WriteLine("Exporting sales report to PDF...");
-
-        await Task.CompletedTask;
-
+        try
+        {
+            var title = $"Sales Report ({startDate?.ToString("MM/dd/yyyy") ?? "All"} - {endDate?.ToString("MM/dd/yyyy") ?? "All"})";
+            var filename = $"SalesReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            await JSRuntime.InvokeVoidAsync("pdfExport.exportTableToPdf", "report-table", title, filename);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error exporting PDF: {ex.Message}";
+            Console.WriteLine($"Error exporting PDF: {ex}");
+            StateHasChanged();
+        }
     }
 
     private async Task ExportSalesExcel()
@@ -929,15 +972,26 @@
     }
 
     private async Task ExportPurchaseReport()
-
     {
+        if (purchaseOrderReportData == null || !purchaseOrderReportData.Any())
+        {
+            errorMessage = "No data available to export.";
+            StateHasChanged();
+            return;
+        }
 
-        // TODO: Implement PDF export
-
-        Console.WriteLine("Exporting purchase order report to PDF...");
-
-        await Task.CompletedTask;
-
+        try
+        {
+            var title = $"Purchase Order Report ({startDate?.ToString("MM/dd/yyyy") ?? "All"} - {endDate?.ToString("MM/dd/yyyy") ?? "All"})";
+            var filename = $"PurchaseOrderReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            await JSRuntime.InvokeVoidAsync("pdfExport.exportTableToPdf", "report-table", title, filename);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error exporting PDF: {ex.Message}";
+            Console.WriteLine($"Error exporting PDF: {ex}");
+            StateHasChanged();
+        }
     }
 
     private async Task ExportPurchaseExcel()
@@ -953,15 +1007,26 @@
     }
 
     private async Task ExportInventoryReport()
-
     {
+        if (inventoryReportData == null || !inventoryReportData.Any())
+        {
+            errorMessage = "No data available to export.";
+            StateHasChanged();
+            return;
+        }
 
-        // TODO: Implement PDF export
-
-        Console.WriteLine("Exporting inventory report to PDF...");
-
-        await Task.CompletedTask;
-
+        try
+        {
+            var title = "Inventory Report";
+            var filename = $"InventoryReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            await JSRuntime.InvokeVoidAsync("pdfExport.exportTableToPdf", "report-table", title, filename);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error exporting PDF: {ex.Message}";
+            Console.WriteLine($"Error exporting PDF: {ex}");
+            StateHasChanged();
+        }
     }
 
     private async Task ExportInventoryExcel()
@@ -977,15 +1042,26 @@
     }
 
     private async Task ExportStockMovementReport()
-
     {
+        if (stockMovementReportData == null || !stockMovementReportData.Any())
+        {
+            errorMessage = "No data available to export.";
+            StateHasChanged();
+            return;
+        }
 
-        // TODO: Implement PDF export
-
-        Console.WriteLine("Exporting stock movement report to PDF...");
-
-        await Task.CompletedTask;
-
+        try
+        {
+            var title = $"Stock Movement Report ({startDate?.ToString("MM/dd/yyyy") ?? "All"} - {endDate?.ToString("MM/dd/yyyy") ?? "All"})";
+            var filename = $"StockMovementReport_{DateTime.Now:yyyyMMdd_HHmmss}.pdf";
+            await JSRuntime.InvokeVoidAsync("pdfExport.exportTableToPdf", "report-table", title, filename);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error exporting PDF: {ex.Message}";
+            Console.WriteLine($"Error exporting PDF: {ex}");
+            StateHasChanged();
+        }
     }
 
     private async Task ExportStockMovementExcel()

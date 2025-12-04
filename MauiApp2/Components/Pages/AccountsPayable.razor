@@ -1,0 +1,342 @@
+@page "/accounts-payable"
+@layout MainLayout
+@using MauiApp2.Services
+@using MauiApp2.Models
+@using System.Linq
+@inject IAuthService AuthService
+@inject IAccountsPayableService AccountsPayableService
+@inject IPaymentService PaymentService
+@inject NavigationManager Navigation
+
+<link href="css/accounting.css" rel="stylesheet" />
+<link href="css/pagination.css" rel="stylesheet" />
+
+<div class="dashboard-wrapper">
+    <Sidebar />
+    <div class="main-content">
+        <div class="content-header">
+            <h1>Accounts Payable</h1>
+            <p>Track money owed to suppliers</p>
+        </div>
+
+        <div class="ap-management">
+            <div class="tab-section">
+                <div class="tabs">
+                    <button class="tab @(selectedStatus == null ? "active" : "")" @onclick="@(() => FilterByStatus(null))">All</button>
+                    <button class="tab @(selectedStatus == "Unpaid" ? "active" : "")" @onclick="@(() => FilterByStatus("Unpaid"))">Unpaid</button>
+                    <button class="tab @(selectedStatus == "Partial" ? "active" : "")" @onclick="@(() => FilterByStatus("Partial"))">Partial</button>
+                    <button class="tab @(selectedStatus == "Paid" ? "active" : "")" @onclick="@(() => FilterByStatus("Paid"))">Paid</button>
+                </div>
+            </div>
+
+            <div class="ap-table-container">
+                <!-- Alert Messages -->
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-error">
+                        <span class="alert-icon">⚠️</span>
+                        <span>@errorMessage</span>
+                        <button class="alert-close" @onclick="ClearError">×</button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✅</span>
+                        <span>@successMessage</span>
+                        <button class="alert-close" @onclick="ClearSuccess">×</button>
+                    </div>
+                }
+
+                @if (isLoading)
+                {
+                    <div class="loading-indicator">
+                        <div class="spinner"></div>
+                        <span>Loading accounts payable...</span>
+                    </div>
+                }
+
+                @if (accountsPayable != null && accountsPayable.Any())
+                {
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>PO Number</th>
+                                    <th>Supplier</th>
+                                    <th>Invoice #</th>
+                                    <th>Total Amount</th>
+                                    <th>Paid Amount</th>
+                                    <th>Balance</th>
+                                    <th>Due Date</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var ap in paginatedAP)
+                                {
+                                    <tr>
+                                        <td>@(ap.po_number ?? "-")</td>
+                                        <td>@(ap.supplier_name ?? "Unknown")</td>
+                                        <td>@(ap.invoice_number ?? "-")</td>
+                                        <td>₱@ap.total_amount.ToString("N2")</td>
+                                        <td>₱@ap.paid_amount.ToString("N2")</td>
+                                        <td>
+                                            <strong class="@(ap.balance_amount > 0 ? "text-danger" : "text-success")">
+                                                ₱@ap.balance_amount.ToString("N2")
+                                            </strong>
+                                        </td>
+                                        <td>@(ap.due_date?.ToString("MM/dd/yyyy") ?? "-")</td>
+                                        <td>
+                                            <span class="status-badge status-@ap.status.ToLower()">
+                                                @ap.status
+                                            </span>
+                                        </td>
+                                        <td>
+                                            @if (ap.balance_amount > 0)
+                                            {
+                                                <button class="btn-primary btn-sm" @onclick="() => RecordPayment(ap)" title="Record Payment">
+                                                    <i class="fas fa-money-bill"></i> Pay
+                                                </button>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (filteredAP.Any())
+                    {
+                        <Pagination CurrentPage="@currentPage"
+                                    PageSize="@pageSize"
+                                    TotalItems="@filteredAP.Count()"
+                                    PageChanged="@OnPageChanged"
+                                    PageSizeChanged="@OnPageSizeChanged" />
+                    }
+
+                    <div class="summary-card">
+                        <h3>Summary</h3>
+                        <div class="summary-grid">
+                            <div class="summary-item">
+                                <span class="summary-label">Total Outstanding:</span>
+                                <span class="summary-value text-danger">₱@totalOutstanding.ToString("N2")</span>
+                            </div>
+                            <div class="summary-item">
+                                <span class="summary-label">Total Paid:</span>
+                                <span class="summary-value text-success">₱@totalPaid.ToString("N2")</span>
+                            </div>
+                        </div>
+                    </div>
+                }
+                else if (!isLoading)
+                {
+                    <div class="empty-state">
+                        <p>No accounts payable found.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Payment Modal -->
+@if (showPaymentModal && selectedAP != null)
+{
+    <div class="modal-overlay" @onclick="ClosePaymentModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Record Payment</h3>
+                <button class="modal-close" @onclick="ClosePaymentModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Supplier: <strong>@selectedAP.supplier_name</strong></label>
+                </div>
+                <div class="form-group">
+                    <label>Outstanding Balance: <strong>₱@selectedAP.balance_amount.ToString("N2")</strong></label>
+                </div>
+                <div class="form-group">
+                    <label>Payment Amount *</label>
+                    <input type="number" class="form-control" @bind="paymentAmount" step="0.01" min="0.01" max="@selectedAP.balance_amount" />
+                </div>
+                <div class="form-group">
+                    <label>Payment Method *</label>
+                    <select class="form-control" @bind="paymentMethod">
+                        <option value="">Select Method</option>
+                        <option value="Cash">Cash</option>
+                        <option value="Card">Card</option>
+                        <option value="GCash">GCash</option>
+                        <option value="PayMaya">PayMaya</option>
+                        <option value="Bank Transfer">Bank Transfer</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Reference Number</label>
+                    <input type="text" class="form-control" @bind="paymentReference" placeholder="Check #, Transaction #, etc." />
+                </div>
+                <div class="form-group">
+                    <label>Notes</label>
+                    <textarea class="form-control" @bind="paymentNotes" rows="3"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="ClosePaymentModal">Cancel</button>
+                <button class="btn-primary" @onclick="SavePayment" disabled="@(isSaving || paymentAmount <= 0 || string.IsNullOrEmpty(paymentMethod))">
+                    @(isSaving ? "Processing..." : "Record Payment")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<MauiApp2.Models.AccountsPayable>? accountsPayable;
+    private MauiApp2.Models.AccountsPayable? selectedAP;
+    private string? selectedStatus;
+    private bool isLoading = true;
+    private bool showPaymentModal = false;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    private decimal paymentAmount = 0;
+    private string paymentMethod = string.Empty;
+    private string? paymentReference = string.Empty;
+    private string? paymentNotes = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccountsPayable();
+    }
+
+    private async Task LoadAccountsPayable()
+    {
+        try
+        {
+            isLoading = true;
+            currentPage = 1; // Reset to first page when filters change
+            accountsPayable = await AccountsPayableService.GetAccountsPayableAsync(selectedStatus);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading accounts payable: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task FilterByStatus(string? status)
+    {
+        selectedStatus = status;
+        await LoadAccountsPayable();
+    }
+
+    private IEnumerable<MauiApp2.Models.AccountsPayable> filteredAP => accountsPayable ?? new List<MauiApp2.Models.AccountsPayable>();
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+    private IEnumerable<MauiApp2.Models.AccountsPayable> paginatedAP => filteredAP
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private decimal totalOutstanding => filteredAP.Where(ap => ap.balance_amount > 0).Sum(ap => ap.balance_amount);
+    private decimal totalPaid => filteredAP.Sum(ap => ap.paid_amount);
+
+    private void RecordPayment(MauiApp2.Models.AccountsPayable ap)
+    {
+        selectedAP = ap;
+        paymentAmount = ap.balance_amount;
+        paymentMethod = string.Empty;
+        paymentReference = string.Empty;
+        paymentNotes = string.Empty;
+        showPaymentModal = true;
+    }
+
+    private void ClosePaymentModal()
+    {
+        showPaymentModal = false;
+        selectedAP = null;
+        paymentAmount = 0;
+        paymentMethod = string.Empty;
+    }
+
+    private async Task SavePayment()
+    {
+        if (selectedAP == null) return;
+
+        try
+        {
+            if (paymentAmount <= 0 || paymentAmount > selectedAP.balance_amount)
+            {
+                errorMessage = "Invalid payment amount.";
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(paymentMethod))
+            {
+                errorMessage = "Please select a payment method.";
+                return;
+            }
+
+            isSaving = true;
+            ClearMessages();
+
+            // Create payment record using PaymentService (automatically creates ledger entries and updates AP)
+            var payment = new MauiApp2.Models.Payment
+            {
+                ap_id = selectedAP.ap_id,
+                payment_date = DateTime.Now,
+                amount = paymentAmount,
+                payment_method = paymentMethod,
+                reference_number = string.IsNullOrWhiteSpace(paymentReference) ? null : paymentReference.Trim(),
+                notes = string.IsNullOrWhiteSpace(paymentNotes) ? null : paymentNotes.Trim(),
+                created_by = AuthService.CurrentUserId
+            };
+
+            await PaymentService.CreatePaymentAsync(payment);
+            successMessage = "Payment recorded successfully!";
+            
+            await LoadAccountsPayable();
+            ClosePaymentModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error recording payment: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearError() => errorMessage = string.Empty;
+    private void ClearSuccess() => successMessage = string.Empty;
+    private void ClearMessages()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+}
+

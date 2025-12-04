@@ -469,7 +469,7 @@
 
                 <button class="btn-cancel" @onclick="CloseAddModal">Cancel</button>
 
-                <button class="btn-submit" @onclick="AddUser" disabled="@(isAddingUser || availableRoles == null || !availableRoles.Any())">
+                <button class="btn-submit" @onclick="ShowAddUserConfirmation" disabled="@(isAddingUser || availableRoles == null || !availableRoles.Any())">
 
                     @if (isAddingUser)
 
@@ -714,7 +714,7 @@
 
                 <button class="btn-cancel" @onclick="CloseEditModal">Cancel</button>
 
-                <button class="btn-submit" @onclick="UpdateUser" disabled="@(!IsEditFormValid || availableRoles == null || !availableRoles.Any())">Update User</button>
+                <button class="btn-submit" @onclick="ShowUpdateUserConfirmation" disabled="@(!IsEditFormValid || availableRoles == null || !availableRoles.Any())">Update User</button>
 
             </div>
 
@@ -722,6 +722,67 @@
 
     </div>
 
+}
+
+<!-- Confirmation Modal for Add User -->
+@if (showAddUserConfirmation)
+{
+    <div class="modal-overlay" @onclick="CloseAddUserConfirmation">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Add User</h3>
+                <button class="modal-close" @onclick="CloseAddUserConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Are you sure you want to add this user?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Full Name:</strong> @newFullName</p>
+                    <p><strong>Username:</strong> @newUsername</p>
+                    <p><strong>Email:</strong> @newEmail</p>
+                    <p><strong>Role:</strong> @(availableRoles.FirstOrDefault(r => r.role_id == newRoleId)?.role_name ?? "N/A")</p>
+                    <p><strong>Status:</strong> @(newIsActive ? "Active" : "Inactive")</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseAddUserConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmAddUser">Confirm Add</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal for Update User -->
+@if (showUpdateUserConfirmation)
+{
+    <div class="modal-overlay" @onclick="CloseUpdateUserConfirmation">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Update User</h3>
+                <button class="modal-close" @onclick="CloseUpdateUserConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to update this user?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Full Name:</strong> @editFullName</p>
+                    <p><strong>Username:</strong> @editUsername</p>
+                    <p><strong>Email:</strong> @editEmail</p>
+                    <p><strong>Role:</strong> @(availableRoles.FirstOrDefault(r => r.role_id == editRoleId)?.role_name ?? "N/A")</p>
+                    <p><strong>Status:</strong> @(editIsActive ? "Active" : "Inactive")</p>
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">This action will permanently update the user information.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseUpdateUserConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmUpdateUser">Confirm Update</button>
+            </div>
+        </div>
+    </div>
 }
 
 @code {
@@ -735,6 +796,10 @@
     private bool showAddModal = false;
 
     private bool showEditModal = false;
+
+    private bool showAddUserConfirmation = false;
+
+    private bool showUpdateUserConfirmation = false;
 
     private MauiApp2.Models.User? editingUser = null;
 
@@ -791,9 +856,25 @@
     protected override async Task OnInitializedAsync()
 
     {
+        // Check if user is Administrator
+        if (AuthService == null || !IsAdministrator())
+        {
+            Navigation.NavigateTo("/dashboard");
+            return;
+        }
 
         await LoadDataAsync();
 
+    }
+
+    // Check if user is Administrator
+    private bool IsAdministrator()
+    {
+        if (AuthService == null)
+            return false;
+
+        string userRole = (AuthService.CurrentUserRoleName ?? "").Trim();
+        return userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
     }
 
     private async Task LoadDataAsync()
@@ -1502,6 +1583,102 @@
 
     // CRUD Operations - IMPROVED ERROR HANDLING
 
+    // Confirmation Modal Methods
+    private void ShowAddUserConfirmation()
+    {
+        if (isAddingUser)
+            return;
+
+        hasAttemptedSubmit = true;
+        ClearModalError();
+        validationErrors.Clear();
+        StateHasChanged();
+
+        ValidateAddForm();
+
+        if (validationErrors.Any())
+        {
+            modalErrorMessage = "Please fix the validation errors before submitting.";
+            StateHasChanged();
+            return;
+        }
+
+        if (availableRoles == null || !availableRoles.Any())
+        {
+            modalErrorMessage = "Cannot add user: No roles available. Please add roles to the database first.";
+            StateHasChanged();
+            return;
+        }
+
+        if (UserService == null)
+        {
+            modalErrorMessage = "Error: UserService is not available. Please check service registration.";
+            StateHasChanged();
+            return;
+        }
+
+        showAddUserConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseAddUserConfirmation()
+    {
+        showAddUserConfirmation = false;
+        StateHasChanged();
+    }
+
+    private void ShowUpdateUserConfirmation()
+    {
+        errorMessage = "";
+        editValidationErrors.Clear();
+        StateHasChanged();
+
+        ValidateEditForm();
+
+        if (editValidationErrors.Any())
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            StateHasChanged();
+            return;
+        }
+
+        if (editingUser == null)
+        {
+            errorMessage = "Error: No user selected for editing.";
+            StateHasChanged();
+            return;
+        }
+
+        if (availableRoles == null || !availableRoles.Any())
+        {
+            errorMessage = "Cannot update user: No roles available. Please add roles to the database first.";
+            StateHasChanged();
+            return;
+        }
+
+        if (UserService == null)
+        {
+            errorMessage = "Error: UserService is not available. Please check service registration.";
+            StateHasChanged();
+            return;
+        }
+
+        showUpdateUserConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateUserConfirmation()
+    {
+        showUpdateUserConfirmation = false;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmAddUser()
+    {
+        showAddUserConfirmation = false;
+        await AddUser();
+    }
+
     private async Task AddUser()
 
     {
@@ -1511,62 +1688,6 @@
         if (isAddingUser)
 
             return;
-
-        // Mark that user has attempted to submit
-
-        hasAttemptedSubmit = true;
-
-        // Clear previous errors
-
-        ClearModalError();
-
-        validationErrors.Clear();
-
-        StateHasChanged();
-
-        // Validate form BEFORE attempting to add
-
-        ValidateAddForm();
-
-        if (validationErrors.Any())
-
-        {
-
-            modalErrorMessage = "Please fix the validation errors before submitting.";
-
-            StateHasChanged();
-
-            return; // Stop here if validation fails
-
-        }
-
-        // Check if roles are available
-
-        if (availableRoles == null || !availableRoles.Any())
-
-        {
-
-            modalErrorMessage = "Cannot add user: No roles available. Please add roles to the database first.";
-
-            StateHasChanged();
-
-            return;
-
-        }
-
-        // Check if UserService is available
-
-        if (UserService == null)
-
-        {
-
-            modalErrorMessage = "Error: UserService is not available. Please check service registration.";
-
-            StateHasChanged();
-
-            return;
-
-        }
 
         // Set loading state
 
@@ -1666,73 +1787,15 @@
 
     }
 
+    private async Task ConfirmUpdateUser()
+    {
+        showUpdateUserConfirmation = false;
+        await UpdateUser();
+    }
+
     private async Task UpdateUser()
 
     {
-
-        // Clear previous errors
-
-        errorMessage = "";
-
-        editValidationErrors.Clear();
-
-        StateHasChanged();
-
-        // Validate form BEFORE attempting to update
-
-        ValidateEditForm();
-
-        if (editValidationErrors.Any())
-
-        {
-
-            errorMessage = "Please fix the validation errors before submitting.";
-
-            StateHasChanged();
-
-            return; // Stop here if validation fails
-
-        }
-
-        if (editingUser == null)
-
-        {
-
-            errorMessage = "Error: No user selected for editing.";
-
-            StateHasChanged();
-
-            return;
-
-        }
-
-        // Check if roles are available
-
-        if (availableRoles == null || !availableRoles.Any())
-
-        {
-
-            errorMessage = "Cannot update user: No roles available. Please add roles to the database first.";
-
-            StateHasChanged();
-
-            return;
-
-        }
-
-        // Check if UserService is available
-
-        if (UserService == null)
-
-        {
-
-            errorMessage = "Error: UserService is not available. Please check service registration.";
-
-            StateHasChanged();
-
-            return;
-
-        }
 
         try
 

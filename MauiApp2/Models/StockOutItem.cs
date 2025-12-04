@@ -14,8 +14,11 @@ namespace MauiApp2.Models
         // Display properties
         public string? product_name { get; set; }
         public string? product_sku { get; set; }
+        public decimal? cost_price { get; set; }
     }
 }
+
+
 
 
 

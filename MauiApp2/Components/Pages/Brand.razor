@@ -125,6 +125,8 @@
 
                             <th>Brand ID</th>
 
+                            <th>Code</th>
+
                             <th>Brand Name</th>
 
                             <th>Description</th>
@@ -148,6 +150,8 @@
                                 <tr>
 
                                     <td>@brand.brand_id</td>
+
+                                    <td><strong>@(brand.brand_code ?? "N/A")</strong></td>
 
                                     <td>@brand.brand_name</td>
 
@@ -199,7 +203,7 @@
 
                             <tr>
 
-                                <td colspan="4" style="text-align: center; padding: 40px; color: #6b7280;">
+                                <td colspan="5" style="text-align: center; padding: 40px; color: #6b7280;">
 
                                     @if (string.IsNullOrWhiteSpace(searchQuery))
 
@@ -296,6 +300,31 @@
 
                     <div class="brand-form-group">
 
+                        <label>Brand Code</label>
+
+                        <input type="text"
+                               class="brand-form-control @(hasAttemptedSubmit && HasError("BrandCode") ? "input-error" : "")"
+                               @bind="newBrandCode"
+                               @bind:event="oninput"
+                               placeholder="Auto-generated if left empty (max 3 chars)"
+                               maxlength="10"
+                               style="text-transform: uppercase;"
+                               disabled="@isLoading" />
+
+                        <small style="color: #6b7280; font-size: 0.875rem;">Leave empty to auto-generate from name</small>
+
+                        @if (hasAttemptedSubmit && HasError("BrandCode"))
+
+                        {
+
+                            <span class="brand-field-error">@GetError("BrandCode")</span>
+
+                        }
+
+                    </div>
+
+                    <div class="brand-form-group">
+
                         <label>Brand Name *</label>
 
                         <input type="text"
@@ -342,7 +371,7 @@
 
                 <button class="brand-btn-cancel" @onclick="CloseAddModal" disabled="@isLoading">Cancel</button>
 
-                <button class="brand-btn-submit" @onclick="AddBrand" disabled="@isLoading">
+                <button class="brand-btn-submit" @onclick="ShowAddBrandConfirmation" disabled="@isLoading">
 
                     @if (isLoading)
 
@@ -412,6 +441,29 @@
 
                     <div class="brand-form-group">
 
+                        <label>Brand Code</label>
+
+                        <input type="text"
+                               class="brand-form-control @(hasAttemptedEditSubmit && HasEditError("BrandCode") ? "input-error" : "")"
+                               @bind="editBrandCode"
+                               @bind:event="oninput"
+                               placeholder="Brand code (max 10 chars)"
+                               maxlength="10"
+                               style="text-transform: uppercase;"
+                               disabled="@isLoading" />
+
+                        @if (hasAttemptedEditSubmit && HasEditError("BrandCode"))
+
+                        {
+
+                            <span class="brand-field-error">@GetEditError("BrandCode")</span>
+
+                        }
+
+                    </div>
+
+                    <div class="brand-form-group">
+
                         <label>Brand Name *</label>
 
                         <input type="text"
@@ -458,7 +510,7 @@
 
                 <button class="brand-btn-cancel" @onclick="CloseEditModal" disabled="@isLoading">Cancel</button>
 
-                <button class="brand-btn-submit" @onclick="UpdateBrand" disabled="@isLoading">
+                <button class="brand-btn-submit" @onclick="ShowUpdateBrandConfirmation" disabled="@isLoading">
 
                     @if (isLoading)
 
@@ -480,6 +532,63 @@
 
 }
 
+<!-- Confirmation Modal for Add Brand -->
+@if (showAddBrandConfirmation)
+{
+    <div class="modal-overlay" style="z-index: 3000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;" @onclick="CloseAddBrandConfirmation">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; max-width: 500px; width: 90%;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Add Brand</h3>
+                <button class="modal-close" @onclick="CloseAddBrandConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-info" style="margin-bottom: 20px;">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Are you sure you want to add this brand?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Brand Code:</strong> @(string.IsNullOrWhiteSpace(newBrandCode) ? "N/A" : newBrandCode.ToUpper())</p>
+                    <p><strong>Brand Name:</strong> @newBrandName</p>
+                    <p><strong>Description:</strong> @(string.IsNullOrWhiteSpace(newDescription) ? "N/A" : newDescription)</p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseAddBrandConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmAddBrand">Confirm Add</button>
+            </div>
+        </div>
+    </div>
+}
+
+<!-- Confirmation Modal for Update Brand -->
+@if (showUpdateBrandConfirmation)
+{
+    <div class="modal-overlay" style="z-index: 3000; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.5); display: flex; align-items: center; justify-content: center;" @onclick="CloseUpdateBrandConfirmation">
+        <div class="modal-content" style="background: white; border-radius: 12px; padding: 0; max-width: 500px; width: 90%;" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>Confirm Update Brand</h3>
+                <button class="modal-close" @onclick="CloseUpdateBrandConfirmation">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="alert alert-warning" style="margin-bottom: 20px;">
+                    <i class="fas fa-exclamation-triangle"></i>
+                    <span>Are you sure you want to update this brand?</span>
+                </div>
+                <div style="padding: 15px; background-color: #f9fafb; border-radius: 8px; margin-bottom: 15px;">
+                    <p><strong>Brand Code:</strong> @(string.IsNullOrWhiteSpace(editBrandCode) ? "N/A" : editBrandCode.ToUpper())</p>
+                    <p><strong>Brand Name:</strong> @editBrandName</p>
+                    <p><strong>Description:</strong> @(string.IsNullOrWhiteSpace(editDescription) ? "N/A" : editDescription)</p>
+                </div>
+                <p style="color: #6b7280; font-size: 0.875rem;">This action will permanently update the brand information.</p>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-cancel" @onclick="CloseUpdateBrandConfirmation">Cancel</button>
+                <button class="btn-submit" @onclick="ConfirmUpdateBrand">Confirm Update</button>
+            </div>
+        </div>
+    </div>
+}
+
 @code {
 
     private string searchQuery = "";
@@ -489,6 +598,10 @@
     private bool showAddModal = false;
 
     private bool showEditModal = false;
+
+    private bool showAddBrandConfirmation = false;
+
+    private bool showUpdateBrandConfirmation = false;
 
     private MauiApp2.Models.Brand? editingBrand = null;
 
@@ -502,11 +615,15 @@
 
     // Add form fields
 
+    private string newBrandCode = "";
+
     private string newBrandName = "";
 
     private string newDescription = "";
 
     // Edit form fields
+
+    private string editBrandCode = "";
 
     private string editBrandName = "";
 
@@ -591,6 +708,8 @@
             return brands.Where(b =>
 
                 b.brand_name.Contains(searchQuery, StringComparison.OrdinalIgnoreCase) ||
+
+                (b.brand_code != null && b.brand_code.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
 
                 (b.description != null && b.description.Contains(searchQuery, StringComparison.OrdinalIgnoreCase)) ||
 
@@ -694,6 +813,8 @@
 
         // Populate edit form
 
+        editBrandCode = brand.brand_code ?? "";
+
         editBrandName = brand.brand_name;
 
         editDescription = brand.description ?? "";
@@ -724,6 +845,8 @@
 
     {
 
+        newBrandCode = "";
+
         newBrandName = "";
 
         newDescription = "";
@@ -737,6 +860,8 @@
     private void ResetEditForm()
 
     {
+
+        editBrandCode = "";
 
         editBrandName = "";
 
@@ -786,6 +911,32 @@
 
             AddValidationError("BrandName", "Brand name already exists");
 
+        // Validate code if provided
+
+        if (!string.IsNullOrWhiteSpace(newBrandCode))
+
+        {
+
+            var code = newBrandCode.Trim().ToUpper();
+
+            if (code.Length > 10)
+
+            {
+
+                AddValidationError("BrandCode", "Brand code must be 10 characters or less");
+
+            }
+
+            else if (brands.Any(b => b.brand_code != null && b.brand_code.Equals(code, StringComparison.OrdinalIgnoreCase)))
+
+            {
+
+                AddValidationError("BrandCode", "Brand code already exists");
+
+            }
+
+        }
+
     }
 
     private void ValidateEditForm()
@@ -805,6 +956,32 @@
         else if (brands.Any(b => b.brand_name.Equals(editBrandName.Trim(), StringComparison.OrdinalIgnoreCase) && b.brand_id != editingBrand?.brand_id))
 
             AddEditValidationError("BrandName", "Brand name already exists");
+
+        // Validate code if provided
+
+        if (!string.IsNullOrWhiteSpace(editBrandCode))
+
+        {
+
+            var code = editBrandCode.Trim().ToUpper();
+
+            if (code.Length > 10)
+
+            {
+
+                AddEditValidationError("BrandCode", "Brand code must be 10 characters or less");
+
+            }
+
+            else if (brands.Any(b => b.brand_code != null && b.brand_code.Equals(code, StringComparison.OrdinalIgnoreCase) && b.brand_id != editingBrand?.brand_id))
+
+            {
+
+                AddEditValidationError("BrandCode", "Brand code already exists");
+
+            }
+
+        }
 
     }
 
@@ -900,39 +1077,79 @@
 
     }
 
-    // CRUD Operations
-
-    private async Task AddBrand()
-
+    // Confirmation Modal Methods
+    private void ShowAddBrandConfirmation()
     {
-
-        // Mark that user has attempted to submit
-
         hasAttemptedSubmit = true;
-
-        // Clear previous messages
-
         errorMessage = "";
-
         validationErrors.Clear();
-
         StateHasChanged();
-
-        // Validate form BEFORE attempting to add
 
         ValidateAddForm();
 
         if (validationErrors.Any())
-
         {
-
             errorMessage = "Please fix the validation errors before submitting.";
-
             StateHasChanged();
-
-            return; // Stop here if validation fails
-
+            return;
         }
+
+        showAddBrandConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseAddBrandConfirmation()
+    {
+        showAddBrandConfirmation = false;
+        StateHasChanged();
+    }
+
+    private void ShowUpdateBrandConfirmation()
+    {
+        hasAttemptedEditSubmit = true;
+        errorMessage = "";
+        editValidationErrors.Clear();
+        StateHasChanged();
+
+        ValidateEditForm();
+
+        if (editValidationErrors.Any())
+        {
+            errorMessage = "Please fix the validation errors before submitting.";
+            StateHasChanged();
+            return;
+        }
+
+        if (editingBrand == null)
+        {
+            errorMessage = "Error: No brand selected for editing.";
+            StateHasChanged();
+            return;
+        }
+
+        showUpdateBrandConfirmation = true;
+        StateHasChanged();
+    }
+
+    private void CloseUpdateBrandConfirmation()
+    {
+        showUpdateBrandConfirmation = false;
+        StateHasChanged();
+    }
+
+    // CRUD Operations
+
+    private async Task ConfirmAddBrand()
+    {
+        Console.WriteLine("ConfirmAddBrand called");
+        showAddBrandConfirmation = false;
+        StateHasChanged();
+        await AddBrand();
+    }
+
+    private async Task AddBrand()
+
+    {
 
         try
 
@@ -945,6 +1162,8 @@
             var newBrand = new MauiApp2.Models.Brand
 
             {
+
+                brand_code = string.IsNullOrWhiteSpace(newBrandCode) ? null : newBrandCode.Trim().ToUpper(),
 
                 brand_name = newBrandName.Trim(),
 
@@ -982,49 +1201,15 @@
 
     }
 
+    private async Task ConfirmUpdateBrand()
+    {
+        showUpdateBrandConfirmation = false;
+        await UpdateBrand();
+    }
+
     private async Task UpdateBrand()
 
     {
-
-        // Mark that user has attempted to submit
-
-        hasAttemptedEditSubmit = true;
-
-        // Clear previous messages
-
-        errorMessage = "";
-
-        editValidationErrors.Clear();
-
-        StateHasChanged();
-
-        // Validate form BEFORE attempting to update
-
-        ValidateEditForm();
-
-        if (editValidationErrors.Any())
-
-        {
-
-            errorMessage = "Please fix the validation errors before submitting.";
-
-            StateHasChanged();
-
-            return; // Stop here if validation fails
-
-        }
-
-        if (editingBrand == null)
-
-        {
-
-            errorMessage = "Error: No brand selected for editing.";
-
-            StateHasChanged();
-
-            return;
-
-        }
 
         try
 
@@ -1039,6 +1224,8 @@
             {
 
                 brand_id = editingBrand.brand_id,
+
+                brand_code = string.IsNullOrWhiteSpace(editBrandCode) ? null : editBrandCode.Trim().ToUpper(),
 
                 brand_name = editBrandName.Trim(),
 

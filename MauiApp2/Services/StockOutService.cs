@@ -176,7 +176,7 @@ namespace MauiApp2.Services
                 var command = new SqlCommand(@"
                     SELECT soi.stock_out_items_id, soi.stock_out_id, soi.product_id, soi.quantity, 
                            soi.reason, soi.created_date,
-                           p.product_name, p.product_sku
+                           p.product_name, p.product_sku, p.cost_price
                     FROM tbl_stock_out_items soi
                     LEFT JOIN tbl_product p ON soi.product_id = p.product_id
                     WHERE soi.stock_out_id = @stock_out_id
@@ -196,7 +196,8 @@ namespace MauiApp2.Services
                         reason = reader.GetString(4),
                         created_date = reader.GetDateTime(5),
                         product_name = reader.IsDBNull(6) ? null : reader.GetString(6),
-                        product_sku = reader.IsDBNull(7) ? null : reader.GetString(7)
+                        product_sku = reader.IsDBNull(7) ? null : reader.GetString(7),
+                        cost_price = reader.IsDBNull(8) ? null : reader.GetDecimal(8)
                     });
                 }
             }
@@ -209,6 +210,8 @@ namespace MauiApp2.Services
         }
     }
 }
+
+
 
 
 

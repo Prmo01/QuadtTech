@@ -118,3 +118,7 @@ FROM [MyAppDB_Old].[dbo].[tbl_users]  -- Your old database
 
 Then run the script while connected to `MyAppDB_New`.
 
+
+
+
+

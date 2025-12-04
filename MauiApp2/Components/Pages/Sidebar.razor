@@ -1,4 +1,5 @@
 ﻿@using MauiApp2.Services
+@using MauiApp2.Components
 
 @inject IAuthService AuthService
 
@@ -34,53 +35,81 @@
 
         </a>
 
-        <!-- User Management with Dropdown -->
+        <!-- Sale Transaction - Visible for Cashier and Administrator -->
+        @if (CanAccessSales())
+        {
+            <a href="/sale-transaction" class="nav-item @GetNavItemClass("/sale-transaction")">
+                <span class="nav-icon"><i class="fas fa-receipt"></i></span>
+                <span class="nav-text">Sale Transaction</span>
+            </a>
+        }
 
-        <div class="nav-section">
-
-            <div class="nav-item nav-section-header @GetNavItemClass("/users", "/roles")" @onclick="ToggleUserManagementMenu">
-
-                <span class="nav-icon"><i class="fas fa-users"></i></span>
-
-                <span class="nav-text">User Management</span>
-
-                <span class="nav-arrow">
-
-                    <i class="fas fa-chevron-down @(isUserManagementMenuOpen ? "open" : "")"></i>
-
-                </span>
-
-            </div>
-
-            @if (isUserManagementMenuOpen)
-
-            {
-
-                <div class="nav-submenu">
-
-                    <a href="/users" class="nav-subitem @GetNavItemClass("/users")">
-
-                        <span class="nav-subicon"><i class="fas fa-list"></i></span>
-
-                        <span class="nav-subtext">User List</span>
-
-                    </a>
-
-                    <!-- <a href="/roles" class="nav-subitem @GetNavItemClass("/roles")">
-
-                        <span class="nav-subicon"><i class="fas fa-user-shield"></i></span>
-
-                        <span class="nav-subtext">Roles & Permission</span>
-
-                    </a> -->
-
+        <!-- Inventory Management - Only visible for Inventory Manager or Administrator -->
+        @if (CanAccessInventory())
+        {
+            <div class="nav-section">
+                <div class="nav-item nav-section-header @GetNavItemClass("/products", "/purchase-orders", "/stockin", "/categories", "/brands", "/taxes", "/suppliers", "/inventory-transactions")" @onclick="ToggleInventoryMenu">
+                    <span class="nav-icon"><i class="fas fa-boxes"></i></span>
+                    <span class="nav-text">Inventory Management</span>
+                    <span class="nav-arrow">
+                        <i class="fas fa-chevron-down @(isInventoryMenuOpen ? "open" : "")"></i>
+                    </span>
                 </div>
+                @if (isInventoryMenuOpen)
+                {
+                    <div class="nav-submenu">
+                        <!-- Products Section -->
+                        <div class="nav-category-header">
+                            <span class="nav-category-text">Products</span>
+                        </div>
+                        <a href="/products" class="nav-subitem @GetNavItemClass("/products")">
+                            <span class="nav-subicon"><i class="fas fa-list"></i></span>
+                            <span class="nav-subtext">Product List</span>
+                        </a>
+                        <a href="/categories" class="nav-subitem @GetNavItemClass("/categories")">
+                            <span class="nav-subicon"><i class="fas fa-tags"></i></span>
+                            <span class="nav-subtext">Category</span>
+                        </a>
+                        <a href="/brands" class="nav-subitem @GetNavItemClass("/brands")">
+                            <span class="nav-subicon"><i class="fas fa-copyright"></i></span>
+                            <span class="nav-subtext">Brand</span>
+                        </a>
+                        <a href="/taxes" class="nav-subitem @GetNavItemClass("/taxes")">
+                            <span class="nav-subicon"><i class="fas fa-percent"></i></span>
+                            <span class="nav-subtext">Tax</span>
+                        </a>
 
-            }
+                        <!-- Purchasing Section -->
+                        <div class="nav-category-header">
+                            <span class="nav-category-text">Purchasing</span>
+                        </div>
+                        <a href="/purchase-orders" class="nav-subitem @GetNavItemClass("/purchase-orders")">
+                            <span class="nav-subicon"><i class="fa-solid fa-cart-shopping"></i></span>
+                            <span class="nav-subtext">Purchase Order</span>
+                        </a>
+                        <a href="/suppliers" class="nav-subitem @GetNavItemClass("/suppliers")">
+                            <span class="nav-subicon"><i class="fas fa-truck"></i></span>
+                            <span class="nav-subtext">Supplier</span>
+                        </a>
 
-        </div>
+                        <!-- Stock Operations Section -->
+                        <div class="nav-category-header">
+                            <span class="nav-category-text">Stock Operations</span>
+                        </div>
+                        <a href="/stockin" class="nav-subitem @GetNavItemClass("/stockin")">
+                            <span class="nav-subicon"><i class="fas fa-box-open"></i></span>
+                            <span class="nav-subtext">Stock In</span>
+                        </a>
+                        <a href="/inventory-transactions" class="nav-subitem @GetNavItemClass("/inventory-transactions")">
+                            <span class="nav-subicon"><i class="fas fa-exchange-alt"></i></span>
+                            <span class="nav-subtext">Inventory Transactions</span>
+                        </a>
+                    </div>
+                }
+            </div>
+        }
 
-        <!-- Reports with Dropdown - Only visible for Inventory Manager or Administrator -->
+        <!-- Reports - Only visible for Inventory Manager or Administrator -->
         @if (CanAccessInventory())
         {
             <div class="nav-section">
@@ -111,122 +140,67 @@
             </div>
         }
 
-        <!-- Inventory Management with Dropdown - Only visible for Inventory Manager or Administrator -->
-        @if (CanAccessInventory())
 
+        <!-- Accounting Section - Only visible for Accountant and Administrator -->
+        @if (CanAccessAccounting())
         {
-
             <div class="nav-section">
-                <div class="nav-item nav-section-header @GetNavItemClass("/products", "/purchase-orders", "/stockin", "/stockadjustment", "/categories", "/brands", "/taxes", "/suppliers", "/sale-transaction", "/sales-history")" @onclick="ToggleInventoryMenu">
-                    <span class="nav-icon"><i class="fas fa-boxes"></i></span>
-
-                    <span class="nav-text">Inventory Management</span>
-
+                <div class="nav-item nav-section-header @GetNavItemClass("/chart-of-accounts", "/accounts-payable", "/expenses", "/general-ledger")" @onclick="ToggleAccountingMenu">
+                    <span class="nav-icon"><i class="fas fa-calculator"></i></span>
+                    <span class="nav-text">Accounting</span>
                     <span class="nav-arrow">
-
-                        <i class="fas fa-chevron-down @(isInventoryMenuOpen ? "open" : "")"></i>
-
+                        <i class="fas fa-chevron-down @(isAccountingMenuOpen ? "open" : "")"></i>
                     </span>
-
                 </div>
-
-                @if (isInventoryMenuOpen)
-
+                @if (isAccountingMenuOpen)
                 {
-
                     <div class="nav-submenu">
-                        <!-- Products Section -->
-                        <div class="nav-category-header">
-                            <span class="nav-category-text">Products</span>
-                        </div>
-                        <a href="/products" class="nav-subitem @GetNavItemClass("/products")">
-
+                        <a href="/chart-of-accounts" class="nav-subitem @GetNavItemClass("/chart-of-accounts")">
                             <span class="nav-subicon"><i class="fas fa-list"></i></span>
-
-                            <span class="nav-subtext">Product List</span>
-
+                            <span class="nav-subtext">Chart of Accounts</span>
                         </a>
-                        <a href="/categories" class="nav-subitem @GetNavItemClass("/categories")">
-
-                            <span class="nav-subicon"><i class="fas fa-tags"></i></span>
-
-                            <span class="nav-subtext">Category</span>
-
+                        <a href="/accounts-payable" class="nav-subitem @GetNavItemClass("/accounts-payable")">
+                            <span class="nav-subicon"><i class="fas fa-file-invoice-dollar"></i></span>
+                            <span class="nav-subtext">Accounts Payable</span>
                         </a>
-
-                        <a href="/brands" class="nav-subitem @GetNavItemClass("/brands")">
-
-                            <span class="nav-subicon"><i class="fas fa-copyright"></i></span>
-
-                            <span class="nav-subtext">Brand</span>
-
-                        </a>
-
-                        <a href="/taxes" class="nav-subitem @GetNavItemClass("/taxes")">
-
-                            <span class="nav-subicon"><i class="fas fa-percent"></i></span>
-
-                            <span class="nav-subtext">Tax</span>
-
-                        </a>
-
-                        <!-- Purchasing Section -->
-                        <div class="nav-category-header">
-                            <span class="nav-category-text">Purchasing</span>
-                        </div>
-                        <a href="/purchase-orders" class="nav-subitem @GetNavItemClass("/purchase-orders")">
-                            <span class="nav-subicon"><i class="fa-solid fa-cart-shopping"></i></span>
-                            <span class="nav-subtext">Purchase Order</span>
-                        </a>
-                        <a href="/suppliers" class="nav-subitem @GetNavItemClass("/suppliers")">
-
-                            <span class="nav-subicon"><i class="fas fa-truck"></i></span>
-
-                            <span class="nav-subtext">Supplier</span>
-
-                        </a>
-
-                        <!-- Inventory Operations Section -->
-                        <div class="nav-category-header">
-                            <span class="nav-category-text">Inventory Operations</span>
-                        </div>
-                        <a href="/stockin" class="nav-subitem @GetNavItemClass("/stockin")">
-                            <span class="nav-subicon"><i class="fas fa-box-open"></i></span>
-                            <span class="nav-subtext">Stock In</span>
-                        </a>
-                        <a href="/stockadjustment" class="nav-subitem @GetNavItemClass("/stockadjustment")">
-                            <span class="nav-subicon"><i class="fas fa-exchange-alt"></i></span>
-                            <span class="nav-subtext">Stock Adjustment</span>
-                        </a>
-
-                        <!-- Sales Section -->
-                        <div class="nav-category-header">
-                            <span class="nav-category-text">Sales</span>
-                        </div>
-                        <a href="/sale-transaction" class="nav-subitem @GetNavItemClass("/sale-transaction")">
+                        <a href="/expenses" class="nav-subitem @GetNavItemClass("/expenses")">
                             <span class="nav-subicon"><i class="fas fa-receipt"></i></span>
-                            <span class="nav-subtext">Sale Transaction</span>
+                            <span class="nav-subtext">Expenses</span>
                         </a>
-                        <a href="/sales-history" class="nav-subitem @GetNavItemClass("/sales-history")">
-                            <span class="nav-subicon"><i class="fas fa-history"></i></span>
-                            <span class="nav-subtext">Sales History</span>
+                        <a href="/general-ledger" class="nav-subitem @GetNavItemClass("/general-ledger")">
+                            <span class="nav-subicon"><i class="fas fa-book"></i></span>
+                            <span class="nav-subtext">General Ledger</span>
                         </a>
-
                     </div>
-
                 }
-
             </div>
-
         }
 
-        <!-- Database Sync - Only visible for Admin/Inventory Manager -->
-        @if (CanAccessInventory())
+        <!-- System - Only visible for Administrator -->
+        @if (IsAdministrator())
         {
-            <a href="/database-sync" class="nav-item @GetNavItemClass("/database-sync")">
-                <span class="nav-icon"><i class="fas fa-database"></i></span>
-                <span class="nav-text">Database Sync</span>
-            </a>
+            <div class="nav-section">
+                <div class="nav-item nav-section-header @GetNavItemClass("/users", "/database-sync")" @onclick="ToggleSystemMenu">
+                    <span class="nav-icon"><i class="fas fa-cog"></i></span>
+                    <span class="nav-text">System</span>
+                    <span class="nav-arrow">
+                        <i class="fas fa-chevron-down @(isSystemMenuOpen ? "open" : "")"></i>
+                    </span>
+                </div>
+                @if (isSystemMenuOpen)
+                {
+                    <div class="nav-submenu">
+                        <a href="/users" class="nav-subitem @GetNavItemClass("/users")">
+                            <span class="nav-subicon"><i class="fas fa-users"></i></span>
+                            <span class="nav-subtext">User Management</span>
+                        </a>
+                        <a href="/database-sync" class="nav-subitem @GetNavItemClass("/database-sync")">
+                            <span class="nav-subicon"><i class="fas fa-database"></i></span>
+                            <span class="nav-subtext">Database Sync</span>
+                        </a>
+                    </div>
+                }
+            </div>
         }
     </nav>
 
@@ -278,15 +252,24 @@
 
     </div>
 
+    <!-- Sync Status Indicator -->
+    @if (AuthService.IsAuthenticated)
+    {
+        <div class="sidebar-footer">
+            <SyncStatusIndicator />
+        </div>
+    }
+
 </aside>
 
 @code {
 
     private bool showUserMenu = false;
 
-    private bool isUserManagementMenuOpen = false;
-    private bool isReportsMenuOpen = false;
     private bool isInventoryMenuOpen = false;
+    private bool isReportsMenuOpen = false;
+    private bool isAccountingMenuOpen = false;
+    private bool isSystemMenuOpen = false;
 
     private string currentUri = string.Empty;
 
@@ -361,15 +344,20 @@
     private void SetMenuStates()
 
     {
-
-        // Keep User Management menu open if on users or roles pages
-
-        if (currentUri.Contains("/users") || currentUri.Contains("/roles"))
-
+        // Keep Inventory Management menu open if on any inventory pages (only if user has access)
+        if (CanAccessInventory())
         {
-
-            isUserManagementMenuOpen = true;
-
+            if (currentUri.Contains("/products") ||
+                currentUri.Contains("/purchase-orders") ||
+                currentUri.Contains("/stockin") ||
+                currentUri.Contains("/categories") ||
+                currentUri.Contains("/brands") ||
+                currentUri.Contains("/taxes") ||
+                currentUri.Contains("/suppliers") ||
+                currentUri.Contains("/inventory-transactions"))
+            {
+                isInventoryMenuOpen = true;
+            }
         }
 
         // Keep Reports menu open if on any reports pages (only if user has access)
@@ -381,33 +369,25 @@
             }
         }
 
-        // Keep Inventory Management menu open if on any inventory pages (only if user has access)
-
-        if (CanAccessInventory())
-
+        // Keep Accounting menu open if on any accounting pages (only if user has access)
+        if (CanAccessAccounting())
         {
-
-            if (currentUri.Contains("/products") ||
-
-                currentUri.Contains("/purchase-orders") ||
-                currentUri.Contains("/stockin") ||
-                currentUri.Contains("/stockadjustment") ||
-
-                currentUri.Contains("/categories") ||
-
-                currentUri.Contains("/brands") ||
-
-                currentUri.Contains("/taxes") ||
-
-                currentUri.Contains("/suppliers") ||
-                currentUri.Contains("/sale-transaction") ||
-                currentUri.Contains("/sales-history"))
+            if (currentUri.Contains("/chart-of-accounts") ||
+                currentUri.Contains("/accounts-payable") ||
+                currentUri.Contains("/expenses") ||
+                currentUri.Contains("/general-ledger"))
             {
-
-                isInventoryMenuOpen = true;
-
+                isAccountingMenuOpen = true;
             }
+        }
 
+        // Keep System menu open if on users or database-sync pages
+        if (IsAdministrator())
+        {
+            if (currentUri.Contains("/users") || currentUri.Contains("/database-sync"))
+            {
+                isSystemMenuOpen = true;
+            }
         }
 
     }
@@ -510,11 +490,11 @@
 
     }
 
-    private void ToggleUserManagementMenu()
+    private void ToggleInventoryMenu()
 
     {
 
-        isUserManagementMenuOpen = !isUserManagementMenuOpen;
+        isInventoryMenuOpen = !isInventoryMenuOpen;
 
     }
 
@@ -523,11 +503,71 @@
         isReportsMenuOpen = !isReportsMenuOpen;
     }
 
-    private void ToggleInventoryMenu()
+    private void ToggleAccountingMenu()
 
     {
 
-        isInventoryMenuOpen = !isInventoryMenuOpen;
+        isAccountingMenuOpen = !isAccountingMenuOpen;
+
+    }
+
+    private void ToggleSystemMenu()
+    {
+        isSystemMenuOpen = !isSystemMenuOpen;
+    }
+
+    // Check if user is Administrator
+    private bool IsAdministrator()
+    {
+        if (AuthService == null)
+            return false;
+
+        string userRole = (AuthService.CurrentUserRoleName ?? "").Trim();
+        return userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Check if user is Cashier
+    private bool IsCashier()
+    {
+        if (AuthService == null)
+            return false;
+
+        string userRole = (AuthService.CurrentUserRoleName ?? "").Trim();
+        return userRole.Equals("Cashier", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Check if user can access sales transactions
+    // Only Cashier and Administrator can access (Inventory Manager excluded for separation of duties)
+    private bool CanAccessSales()
+    {
+        if (AuthService == null)
+            return false;
+
+        string userRole = (AuthService.CurrentUserRoleName ?? "").Trim();
+        return userRole.Equals("Cashier", StringComparison.OrdinalIgnoreCase) ||
+               userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
+    }
+
+    // Check if user can access accounting
+    // Only "Accountant" and "Administrator" roles can access
+    private bool CanAccessAccounting()
+
+    {
+
+        if (AuthService == null)
+
+        {
+
+            return false;
+
+        }
+
+        string userRole = (AuthService.CurrentUserRoleName ?? "").Trim();
+        bool canAccess = userRole.Equals("Accountant", StringComparison.OrdinalIgnoreCase) ||
+
+                         userRole.Equals("Administrator", StringComparison.OrdinalIgnoreCase);
+
+        return canAccess;
 
     }
 

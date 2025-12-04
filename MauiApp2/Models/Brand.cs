@@ -13,6 +13,7 @@ namespace MauiApp2.Models
     {
         public int brand_id { get; set; }
         public string brand_name { get; set; } = string.Empty;
+        public string brand_code { get; set; } = string.Empty; // 2-3 character code for SKU generation
         public string? description { get; set; }
     }
 }

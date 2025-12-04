@@ -340,3 +340,7 @@ PRINT '=== All Tables Fixed! ===';
 PRINT 'You can now sync your data again. The sync should work without errors.';
 GO
 
+
+
+
+

@@ -1,138 +1,115 @@
-# Troubleshooting Cloud Database Connection 🔧
+# Troubleshooting Cloud Database Connection Issues
 
-## Current Issue
-Cloud Database connection is **failing**. Here's how to fix it:
+## Error: "A transport-level error has occurred"
 
-## Step 1: Check Remote Access Settings
+This error indicates a network connectivity problem. Here are solutions:
 
-Since you're connecting from your **local machine** (not a hosted website), you need to use **"Remote access"** settings from MonsterAPI, not "Local access".
+## Solution 1: Check Connection String Settings
 
-1. Go to your MonsterAPI dashboard
-2. Click on the **"Remote access"** tab (not "Local access")
-3. Copy the connection string or connection details from there
+Update your connection string to include timeout settings:
 
-## Step 2: Common Connection String Formats
-
-Try these different formats in `App.config`:
-
-### Format 1: Standard with Encryption (Current)
-```xml
-<add name="CloudConnection"
-     connectionString="Data Source=db33496.databaseasp.net,1433;Initial Catalog=db33496;User ID=db33496;Password=4r%25M_6Wi3f%23P;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;Connection Timeout=30;" />
+```
+Data Source=db34089.public.databaseasp.net,1433;
+Initial Catalog=db34089;
+User ID=db34089;
+Password=9Ch?b3!B2Sm%;
+Trust Server Certificate=True;
+Connection Timeout=60;
+Command Timeout=300;
 ```
 
-### Format 2: Without Encryption (If Format 1 fails)
-```xml
-<add name="CloudConnection"
-     connectionString="Data Source=db33496.databaseasp.net,1433;Initial Catalog=db33496;User ID=db33496;Password=4r%25M_6Wi3f%23P;Encrypt=False;MultipleActiveResultSets=True;Connection Timeout=30;" />
+## Solution 2: Test Connection First
+
+1. In SSMS, try to connect manually:
+   - Server name: `db34089.public.databaseasp.net,1433`
+   - Authentication: SQL Server Authentication
+   - Login: `db34089`
+   - Password: `9Ch?b3!B2Sm%`
+   - Check "Trust server certificate"
+
+2. If connection works manually, the script should work too.
+
+## Solution 3: Run Script in Smaller Batches
+
+The script might be timing out because it's too large. Try running it in sections:
+
+### Batch 1: Core Tables (Run First)
+```sql
+-- Run sections 1-7 (roles, users, category, brand, tax, product, supplier)
+-- Stop after tbl_supplier is created
 ```
 
-### Format 3: Using Server= format
-```xml
-<add name="CloudConnection"
-     connectionString="Server=db33496.databaseasp.net,1433;Database=db33496;User Id=db33496;Password=4r%25M_6Wi3f%23P;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;Connection Timeout=30;" />
+### Batch 2: Transaction Tables
+```sql
+-- Run sections 8-15 (purchase orders, stock in/out, sales orders)
 ```
 
-## Step 3: Password Encoding
-
-If your password contains special characters, they need to be URL-encoded:
-- `%` becomes `%25`
-- `#` becomes `%23`
-- `&` becomes `%26`
-- `@` becomes `%40`
-
-Your password `4r%M_6Wi3f#P` should be encoded as `4r%25M_6Wi3f%23P`
-
-## Step 4: Common Issues & Solutions
-
-### Issue 1: Firewall Blocking Port 1433
-**Solution:**
-- Check if your firewall allows outbound connections on port 1433
-- Some networks block SQL Server ports
-- Try from a different network (mobile hotspot) to test
-
-### Issue 2: Server Not Allowing Remote Connections
-**Solution:**
-- Check MonsterAPI dashboard for "Remote access" settings
-- Some free plans may restrict remote access
-- Contact MonsterAPI support if remote access is disabled
-
-### Issue 3: Wrong Server Address
-**Solution:**
-- Use the exact server name from MonsterAPI (not IP address)
-- Make sure you're using the "Remote access" server name, not "Local access"
-
-### Issue 4: Timeout Errors
-**Solution:**
-- Increase `Connection Timeout=60` or higher
-- Check your internet connection
-- Try again during off-peak hours
-
-### Issue 5: Authentication Failed
-**Solution:**
-- Double-check username and password
-- Make sure password is properly URL-encoded
-- Verify credentials in MonsterAPI dashboard
-
-## Step 5: Test the Connection
-
-1. Update `App.config` with one of the connection string formats above
-2. Restart your application
-3. Go to Database Sync page
-4. Click "Test Connections"
-5. Check the error message (it will now show detailed error)
-
-## Step 6: Check Error Messages
-
-The improved error display will show you:
-- **Network-related errors**: "A network-related or instance-specific error"
-  - → Check firewall, network, server address
-  
-- **Authentication errors**: "Login failed for user"
-  - → Check username/password
-  
-- **Timeout errors**: "Timeout expired"
-  - → Increase Connection Timeout value
-  
-- **Server not found**: "Cannot open server"
-  - → Check server name/address
-
-## Alternative: Use Remote Access IP/Port
-
-If MonsterAPI provides a different IP address or port for remote access:
-1. Get the remote access details from MonsterAPI dashboard
-2. Update the connection string with those values
-3. Some providers use different ports (not 1433) for remote access
-
-## Quick Test
-
-Try this connection string format (most compatible):
-```xml
-<add name="CloudConnection"
-     connectionString="Data Source=db33496.databaseasp.net,1433;Initial Catalog=db33496;User ID=db33496;Password=4r%25M_6Wi3f%23P;Encrypt=True;TrustServerCertificate=True;MultipleActiveResultSets=True;Connection Timeout=60;Persist Security Info=False;" />
+### Batch 3: Accounting Tables
+```sql
+-- Run sections 16-19 (chart of accounts, GL, AP, expenses)
 ```
 
-## Still Not Working?
+### Batch 4: Sync Tables
+```sql
+-- Run sections 20-22 (sync queue, sync history, connectivity log)
+```
 
-1. **Check MonsterAPI Dashboard:**
-   - Is "Remote access" enabled?
-   - What connection string does it show?
-   - Are there any IP whitelist restrictions?
+### Batch 5: Initial Data
+```sql
+-- Run the INSERT statements for roles and taxes
+```
 
-2. **Test with SQL Server Management Studio (SSMS):**
-   - Try connecting directly with SSMS
-   - If SSMS works, copy that exact connection string format
-   - If SSMS fails, the issue is with MonsterAPI settings
+## Solution 4: Check Firewall/Network
 
-3. **Contact MonsterAPI Support:**
-   - Ask for remote connection details
-   - Verify your plan allows remote connections
-   - Get the correct connection string format
+1. **Check if port 1433 is open:**
+   - Some networks block SQL Server port 1433
+   - Try from a different network (mobile hotspot)
 
-## Next Steps
+2. **Check firewall settings:**
+   - Windows Firewall might be blocking
+   - Corporate firewall might block SQL connections
 
-After fixing the connection:
-1. Test connections again
-2. Once both show "Connected", you can sync
-3. The sync will copy all your local data to cloud
+3. **Try from different location:**
+   - Test from home vs office
+   - Test from mobile hotspot
 
+## Solution 5: Use Azure Data Studio
+
+If SSMS is having issues, try Azure Data Studio:
+1. Download Azure Data Studio
+2. Connect using same credentials
+3. Run the script there
+
+## Solution 6: Run Script via Application
+
+If direct connection fails, you can:
+1. Use the Database Sync page in your application
+2. It will create tables automatically when syncing
+3. Or create a simple C# script to run the SQL
+
+## Solution 7: Contact Database Provider
+
+If none of the above work:
+- Contact MonsterAPI support
+- Verify database is active and accessible
+- Check if there are any service outages
+
+## Quick Test Script
+
+Run `TEST_CLOUD_CONNECTION.sql` first to verify basic connectivity before running the full setup.
+
+## Alternative: Create Tables One by One
+
+If the full script times out, you can create tables individually:
+
+1. Start with just `tbl_roles`
+2. Then `tbl_users`
+3. Continue one table at a time
+4. This avoids timeout issues
+
+## Recommended Approach
+
+1. **First:** Test connection with `TEST_CLOUD_CONNECTION.sql`
+2. **If that works:** Run `CompleteCloudDatabaseSetup.sql` in smaller batches
+3. **If connection fails:** Check network/firewall settings
+4. **Last resort:** Create tables via application sync feature

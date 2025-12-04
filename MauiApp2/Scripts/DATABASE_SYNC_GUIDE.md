@@ -132,3 +132,7 @@ The sync process copies data from local to cloud for these tables (in order):
 - Keep `App.config` secure and don't commit passwords to public repositories
 - Consider using environment variables or secure configuration for production
 
+
+
+
+

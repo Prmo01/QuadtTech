@@ -1,0 +1,334 @@
+@page "/chart-of-accounts"
+@layout MainLayout
+@using MauiApp2.Services
+@using MauiApp2.Models
+@using System.Linq
+@inject IAuthService AuthService
+@inject IChartOfAccountService ChartOfAccountService
+@inject NavigationManager Navigation
+
+<link href="css/accounting.css" rel="stylesheet" />
+<link href="css/pagination.css" rel="stylesheet" />
+
+<div class="dashboard-wrapper">
+    <Sidebar />
+    <div class="main-content">
+        <div class="content-header">
+            <h1>Chart of Accounts</h1>
+            <p>Manage your accounting accounts</p>
+        </div>
+
+        <div class="account-management">
+            <div class="tab-section">
+                <div class="tabs">
+                    <button class="tab active">Account List</button>
+                </div>
+            </div>
+
+            <div class="account-table-container">
+                <!-- Alert Messages -->
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <div class="alert alert-error">
+                        <span class="alert-icon">⚠️</span>
+                        <span>@errorMessage</span>
+                        <button class="alert-close" @onclick="ClearError">×</button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(successMessage))
+                {
+                    <div class="alert alert-success">
+                        <span class="alert-icon">✅</span>
+                        <span>@successMessage</span>
+                        <button class="alert-close" @onclick="ClearSuccess">×</button>
+                    </div>
+                }
+
+                @if (isLoading)
+                {
+                    <div class="loading-indicator">
+                        <div class="spinner"></div>
+                        <span>Loading accounts...</span>
+                    </div>
+                }
+
+                <div class="account-toolbar">
+                    <button class="btn-primary" @onclick="ShowAddModal">
+                        <i class="fas fa-plus"></i> Add Account
+                    </button>
+                </div>
+
+                @if (accounts != null && accounts.Any())
+                {
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Account Code</th>
+                                    <th>Account Name</th>
+                                    <th>Type</th>
+                                    <th>Description</th>
+                                    <th>Status</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var account in paginatedAccounts)
+                                {
+                                    <tr>
+                                        <td>@account.account_code</td>
+                                        <td>@account.account_name</td>
+                                        <td>
+                                            <span class="badge badge-@GetAccountTypeClass(account.account_type)">
+                                                @account.account_type
+                                            </span>
+                                        </td>
+                                        <td>@(account.description ?? "-")</td>
+                                        <td>
+                                            <span class="status-badge @(account.is_active ? "active" : "inactive")">
+                                                @(account.is_active ? "Active" : "Inactive")
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <button class="btn-icon" @onclick="() => EditAccount(account)" title="Edit">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+
+                    @if (filteredAccounts.Any())
+                    {
+                        <Pagination CurrentPage="@currentPage"
+                                    PageSize="@pageSize"
+                                    TotalItems="@filteredAccounts.Count()"
+                                    PageChanged="@OnPageChanged"
+                                    PageSizeChanged="@OnPageSizeChanged" />
+                    }
+                }
+                else if (!isLoading)
+                {
+                    <div class="empty-state">
+                        <p>No accounts found. Click "Add Account" to create one.</p>
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Modal -->
+@if (showModal)
+{
+    <div class="modal-overlay" @onclick="CloseModal">
+        <div class="modal-content" @onclick:stopPropagation="true">
+            <div class="modal-header">
+                <h3>@(editingAccount != null ? "Edit Account" : "Add Account")</h3>
+                <button class="modal-close" @onclick="CloseModal">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>Account Code *</label>
+                    <input type="text" class="form-control" @bind="newAccountCode" placeholder="e.g., 1001" />
+                </div>
+                <div class="form-group">
+                    <label>Account Name *</label>
+                    <input type="text" class="form-control" @bind="newAccountName" placeholder="e.g., Cash" />
+                </div>
+                <div class="form-group">
+                    <label>Account Type *</label>
+                    <select class="form-control" @bind="newAccountType">
+                        <option value="">Select Type</option>
+                        <option value="Asset">Asset</option>
+                        <option value="Liability">Liability</option>
+                        <option value="Equity">Equity</option>
+                        <option value="Revenue">Revenue</option>
+                        <option value="Expense">Expense</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea class="form-control" @bind="newDescription" rows="3" placeholder="Optional description"></textarea>
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" @bind="newIsActive" />
+                        Active
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" @onclick="CloseModal">Cancel</button>
+                <button class="btn-primary" @onclick="SaveAccount" disabled="@isSaving">
+                    @(isSaving ? "Saving..." : "Save")
+                </button>
+            </div>
+        </div>
+    </div>
+}
+
+@code {
+    private List<ChartOfAccount>? accounts;
+    private ChartOfAccount? editingAccount;
+    private bool isLoading = true;
+    private bool showModal = false;
+    private bool isSaving = false;
+    private string errorMessage = string.Empty;
+    private string successMessage = string.Empty;
+
+    private string newAccountCode = string.Empty;
+    private string newAccountName = string.Empty;
+    private string newAccountType = string.Empty;
+    private string? newDescription = string.Empty;
+    private bool newIsActive = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAccounts();
+    }
+
+    private async Task LoadAccounts()
+    {
+        try
+        {
+            isLoading = true;
+            accounts = await ChartOfAccountService.GetAccountsAsync();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading accounts: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private IEnumerable<ChartOfAccount> filteredAccounts => accounts ?? new List<ChartOfAccount>();
+
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 10;
+
+    private IEnumerable<ChartOfAccount> paginatedAccounts => filteredAccounts
+        .Skip((currentPage - 1) * pageSize)
+        .Take(pageSize);
+
+    private void OnPageChanged(int page)
+    {
+        currentPage = page;
+        StateHasChanged();
+    }
+
+    private void OnPageSizeChanged(int newPageSize)
+    {
+        pageSize = newPageSize;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private string GetAccountTypeClass(string accountType)
+    {
+        return accountType.ToLower() switch
+        {
+            "asset" => "primary",
+            "liability" => "warning",
+            "equity" => "info",
+            "revenue" => "success",
+            "expense" => "danger",
+            _ => "secondary"
+        };
+    }
+
+    private void ShowAddModal()
+    {
+        editingAccount = null;
+        newAccountCode = string.Empty;
+        newAccountName = string.Empty;
+        newAccountType = string.Empty;
+        newDescription = string.Empty;
+        newIsActive = true;
+        showModal = true;
+    }
+
+    private void EditAccount(ChartOfAccount account)
+    {
+        editingAccount = account;
+        newAccountCode = account.account_code;
+        newAccountName = account.account_name;
+        newAccountType = account.account_type;
+        newDescription = account.description;
+        newIsActive = account.is_active;
+        showModal = true;
+    }
+
+    private void CloseModal()
+    {
+        showModal = false;
+        editingAccount = null;
+    }
+
+    private async Task SaveAccount()
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(newAccountCode) || 
+                string.IsNullOrWhiteSpace(newAccountName) || 
+                string.IsNullOrWhiteSpace(newAccountType))
+            {
+                errorMessage = "Please fill in all required fields.";
+                return;
+            }
+
+            isSaving = true;
+            ClearMessages();
+
+            var account = new ChartOfAccount
+            {
+                account_code = newAccountCode.Trim(),
+                account_name = newAccountName.Trim(),
+                account_type = newAccountType,
+                description = string.IsNullOrWhiteSpace(newDescription) ? null : newDescription.Trim(),
+                is_active = newIsActive
+            };
+
+            if (editingAccount != null)
+            {
+                account.account_id = editingAccount.account_id;
+                await ChartOfAccountService.UpdateAccountAsync(account);
+                successMessage = "Account updated successfully!";
+            }
+            else
+            {
+                await ChartOfAccountService.CreateAccountAsync(account);
+                successMessage = "Account created successfully!";
+            }
+
+            await LoadAccounts();
+            CloseModal();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error saving account: {ex.Message}";
+        }
+        finally
+        {
+            isSaving = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ClearError() => errorMessage = string.Empty;
+    private void ClearSuccess() => successMessage = string.Empty;
+    private void ClearMessages()
+    {
+        errorMessage = string.Empty;
+        successMessage = string.Empty;
+    }
+}
+

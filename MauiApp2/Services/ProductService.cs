@@ -75,68 +75,91 @@ namespace MauiApp2.Services
             return products;
         }
 
-        // Generate unique SKU in format: brand-category-number
+        // Generate unique SKU in format: CATEGORY-BRAND-NUMBER (e.g., REF-SAM-0001)
         private async Task<string> GenerateSkuAsync(SqlConnection connection, int? brandId, int? categoryId)
         {
-            // Get brand name
-            string brandName = "GEN"; // Default if no brand
-            if (brandId.HasValue)
-            {
-                var brandCommand = new SqlCommand(
-                    "SELECT brand_name FROM tbl_brand WHERE brand_id = @brand_id",
-                    connection);
-                brandCommand.Parameters.AddWithValue("@brand_id", brandId.Value);
-                var brandResult = await brandCommand.ExecuteScalarAsync();
-                if (brandResult != null && !DBNull.Value.Equals(brandResult))
-                {
-                    brandName = brandResult.ToString() ?? "GEN";
-                }
-            }
-
-            // Get category name
-            string categoryName = "GEN"; // Default if no category
+            // Get category code
+            string categoryCode = "MISC"; // Default if no category
             if (categoryId.HasValue)
             {
                 var categoryCommand = new SqlCommand(
-                    "SELECT category_name FROM tbl_category WHERE category_id = @category_id",
+                    "SELECT ISNULL(category_code, UPPER(LEFT(REPLACE(REPLACE(category_name, ' ', ''), '-', ''), 4))) FROM tbl_category WHERE category_id = @category_id",
                     connection);
                 categoryCommand.Parameters.AddWithValue("@category_id", categoryId.Value);
                 var categoryResult = await categoryCommand.ExecuteScalarAsync();
                 if (categoryResult != null && !DBNull.Value.Equals(categoryResult))
                 {
-                    categoryName = categoryResult.ToString() ?? "GEN";
+                    var code = categoryResult.ToString() ?? "MISC";
+                    categoryCode = code.Length > 4 ? code.Substring(0, 4) : code;
                 }
             }
 
-            // Sanitize names: remove spaces, special characters, convert to uppercase
-            brandName = SanitizeForSku(brandName);
-            categoryName = SanitizeForSku(categoryName);
-
-            string sku;
-            bool exists;
-            int counter = 1;
-
-            do
+            // Get brand code
+            string brandCode = "GEN"; // Default if no brand
+            if (brandId.HasValue)
             {
-                // Generate SKU format: brand-category-number
-                string counterSuffix = counter.ToString("D4");
-                sku = $"{brandName}-{categoryName}-{counterSuffix}";
-
-                // Check if SKU already exists
-                var checkCommand = new SqlCommand(
-                    "SELECT COUNT(*) FROM tbl_product WHERE product_sku = @product_sku",
+                var brandCommand = new SqlCommand(
+                    "SELECT ISNULL(brand_code, UPPER(LEFT(REPLACE(REPLACE(brand_name, ' ', ''), '-', ''), 3))) FROM tbl_brand WHERE brand_id = @brand_id",
                     connection);
-                checkCommand.Parameters.AddWithValue("@product_sku", sku);
-
-                var count = (int)await checkCommand.ExecuteScalarAsync();
-                exists = count > 0;
-
-                if (exists)
+                brandCommand.Parameters.AddWithValue("@brand_id", brandId.Value);
+                var brandResult = await brandCommand.ExecuteScalarAsync();
+                if (brandResult != null && !DBNull.Value.Equals(brandResult))
                 {
-                    counter++;
-                    checkCommand.Parameters.Clear();
+                    var code = brandResult.ToString() ?? "GEN";
+                    brandCode = code.Length > 3 ? code.Substring(0, 3) : code;
                 }
-            } while (exists);
+            }
+
+            // Ensure codes are uppercase and alphanumeric only
+            categoryCode = Regex.Replace(categoryCode.ToUpper(), @"[^A-Z0-9]", "");
+            brandCode = Regex.Replace(brandCode.ToUpper(), @"[^A-Z0-9]", "");
+
+            if (string.IsNullOrWhiteSpace(categoryCode)) categoryCode = "MISC";
+            if (string.IsNullOrWhiteSpace(brandCode)) brandCode = "GEN";
+
+            // Get the next sequential number for this category-brand combination
+            int nextNumber = 1;
+            var prefix = $"{categoryCode}-{brandCode}-";
+            var maxSkuCommand = new SqlCommand(@"
+                SELECT MAX(CAST(SUBSTRING(product_sku, @prefixLen + 1, 4) AS INT))
+                FROM tbl_product
+                WHERE product_sku LIKE @pattern 
+                AND LEN(product_sku) = @prefixLen + 4
+                AND ISNUMERIC(SUBSTRING(product_sku, @prefixLen + 1, 4)) = 1", connection);
+            
+            string pattern = prefix + "____";
+            maxSkuCommand.Parameters.AddWithValue("@pattern", pattern);
+            maxSkuCommand.Parameters.AddWithValue("@prefixLen", prefix.Length);
+            
+            var maxResult = await maxSkuCommand.ExecuteScalarAsync();
+            if (maxResult != null && !DBNull.Value.Equals(maxResult))
+            {
+                try
+                {
+                    nextNumber = Convert.ToInt32(maxResult) + 1;
+                }
+                catch
+                {
+                    nextNumber = 1; // Fallback if conversion fails
+                }
+            }
+
+            // Generate SKU format: CATEGORY-BRAND-NUMBER
+            string sku = $"{categoryCode}-{brandCode}-{nextNumber.ToString("D4")}";
+
+            // Double-check for uniqueness (in case of race condition)
+            var checkCommand = new SqlCommand(
+                "SELECT COUNT(*) FROM tbl_product WHERE product_sku = @product_sku",
+                connection);
+            checkCommand.Parameters.AddWithValue("@product_sku", sku);
+
+            var count = (int)await checkCommand.ExecuteScalarAsync();
+            if (count > 0)
+            {
+                // If exists, increment and try again
+                nextNumber++;
+                sku = $"{categoryCode}-{brandCode}-{nextNumber.ToString("D4")}";
+            }
 
             return sku;
         }

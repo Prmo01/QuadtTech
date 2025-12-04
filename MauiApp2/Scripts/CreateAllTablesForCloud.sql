@@ -418,3 +418,7 @@ PRINT 'You can now sync your data from local database to cloud database.';
 PRINT 'Go to Database Sync page and click "Sync to Cloud"';
 GO
 
+
+
+
+

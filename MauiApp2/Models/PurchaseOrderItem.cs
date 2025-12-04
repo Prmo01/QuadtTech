@@ -9,6 +9,10 @@ namespace MauiApp2.Models
         public int product_id { get; set; }
         public int quantity_ordered { get; set; }
         public decimal unit_cost { get; set; }
+        public decimal tax_rate { get; set; }
+        public decimal tax_amount { get; set; }
+        public decimal subtotal { get; set; }
+        public decimal total { get; set; }
         public DateTime created_date { get; set; }
         
         // Display properties

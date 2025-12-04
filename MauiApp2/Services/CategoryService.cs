@@ -28,7 +28,7 @@ namespace MauiApp2.Services
                 await connection.OpenAsync();
 
                 var command = new SqlCommand(@"
-                    SELECT category_id, category_name, description 
+                    SELECT category_id, category_name, ISNULL(category_code, ''), description 
                     FROM tbl_category 
                     ORDER BY category_name", connection);
 
@@ -39,7 +39,8 @@ namespace MauiApp2.Services
                     {
                         category_id = reader.GetInt32(0),
                         category_name = reader.GetString(1),
-                        description = reader.IsDBNull(2) ? null : reader.GetString(2)
+                        category_code = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        description = reader.IsDBNull(3) ? null : reader.GetString(3)
                     });
                 }
             }
@@ -68,12 +69,23 @@ namespace MauiApp2.Services
                 using var connection = db.GetConnection();
                 await connection.OpenAsync();
 
+                // Auto-generate category_code if not provided
+                string categoryCode = category.category_code;
+                if (string.IsNullOrWhiteSpace(categoryCode))
+                {
+                    // Generate code from first 4 characters of category name
+                    var sanitized = System.Text.RegularExpressions.Regex.Replace(
+                        category.category_name.ToUpper(), @"[^A-Z0-9]", "");
+                    categoryCode = sanitized.Length > 4 ? sanitized.Substring(0, 4) : (sanitized.Length > 0 ? sanitized : "MISC");
+                }
+
                 var command = new SqlCommand(@"
-                    INSERT INTO tbl_category (category_name, description)
-                    VALUES (@category_name, @description);
+                    INSERT INTO tbl_category (category_name, category_code, description)
+                    VALUES (@category_name, @category_code, @description);
                     SELECT SCOPE_IDENTITY();", connection);
 
                 command.Parameters.AddWithValue("@category_name", category.category_name);
+                command.Parameters.AddWithValue("@category_code", categoryCode);
                 command.Parameters.AddWithValue("@description", (object)category.description ?? DBNull.Value);
 
                 var result = await command.ExecuteScalarAsync();
@@ -97,13 +109,24 @@ namespace MauiApp2.Services
                 using var connection = db.GetConnection();
                 await connection.OpenAsync();
 
+                // Auto-generate category_code if not provided
+                string categoryCode = category.category_code;
+                if (string.IsNullOrWhiteSpace(categoryCode))
+                {
+                    // Generate code from first 4 characters of category name
+                    var sanitized = System.Text.RegularExpressions.Regex.Replace(
+                        category.category_name.ToUpper(), @"[^A-Z0-9]", "");
+                    categoryCode = sanitized.Length > 4 ? sanitized.Substring(0, 4) : (sanitized.Length > 0 ? sanitized : "MISC");
+                }
+
                 var command = new SqlCommand(@"
                     UPDATE tbl_category 
-                    SET category_name = @category_name, description = @description
+                    SET category_name = @category_name, category_code = @category_code, description = @description
                     WHERE category_id = @category_id", connection);
 
                 command.Parameters.AddWithValue("@category_id", category.category_id);
                 command.Parameters.AddWithValue("@category_name", category.category_name);
+                command.Parameters.AddWithValue("@category_code", categoryCode);
                 command.Parameters.AddWithValue("@description", (object)category.description ?? DBNull.Value);
 
                 return await command.ExecuteNonQueryAsync() > 0;
@@ -155,7 +178,7 @@ namespace MauiApp2.Services
                 await connection.OpenAsync();
 
                 var command = new SqlCommand(@"
-                    SELECT category_id, category_name, description 
+                    SELECT category_id, category_name, ISNULL(category_code, ''), description 
                     FROM tbl_category 
                     WHERE category_id = @category_id", connection);
 
@@ -168,7 +191,8 @@ namespace MauiApp2.Services
                     {
                         category_id = reader.GetInt32(0),
                         category_name = reader.GetString(1),
-                        description = reader.IsDBNull(2) ? null : reader.GetString(2)
+                        category_code = reader.IsDBNull(2) ? "" : reader.GetString(2),
+                        description = reader.IsDBNull(3) ? null : reader.GetString(3)
                     };
                 }
 

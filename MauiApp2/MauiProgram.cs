@@ -31,6 +31,18 @@ public static class MauiProgram
         builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
         builder.Services.AddScoped<IReportService, ReportService>();
         builder.Services.AddScoped<IDatabaseSyncService, DatabaseSyncService>();
+        
+        // Offline Mode & Sync Services
+        builder.Services.AddSingleton<IConnectivityService, ConnectivityService>();
+        builder.Services.AddScoped<ISyncQueueService, SyncQueueService>();
+        builder.Services.AddSingleton<IAutoSyncService, AutoSyncService>();
+        
+        // Accounting Services
+        builder.Services.AddScoped<IChartOfAccountService, ChartOfAccountService>();
+        builder.Services.AddScoped<IGeneralLedgerService, GeneralLedgerService>();
+        builder.Services.AddScoped<IAccountsPayableService, AccountsPayableService>();
+        builder.Services.AddScoped<IPaymentService, PaymentService>();
+        builder.Services.AddScoped<IExpenseService, ExpenseService>();
 
 #if DEBUG
         builder.Services.AddBlazorWebViewDeveloperTools();
