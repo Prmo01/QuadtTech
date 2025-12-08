@@ -1,9 +1,11 @@
-﻿@page "/"
+@page "/"
 @page "/login"
 
 @using MauiApp2.Services
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+
+@* Login page orchestrates branding UI, input validation, and async AuthService sign-in with loading, error, and navigation handling. *@
 
 <head>
     <link href="css/login.css" rel="stylesheet" />
