@@ -1,4 +1,4 @@
-﻿@page "/"
+@page "/"
 @page "/login"
 
 @using MauiApp2.Services
@@ -135,6 +135,8 @@
 </div>
 
 @code {
+    // This login component provides a modern split-screen authentication interface that validates user credentials, manages loading states and error messages, and navigates to the dashboard upon successful authentication through the AuthService.
+    
     private string username = string.Empty;
     private string password = string.Empty;
     private bool isLoading = false;
